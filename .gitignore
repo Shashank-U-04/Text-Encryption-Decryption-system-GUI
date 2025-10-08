@@ -1,25 +1,37 @@
-# Compiled executables
+# Compiled binaries and object files
 *.exe
 *.out
 *.o
 *.obj
+*.exe.stackdump
 
-# Documentation files (keeping only README)
-*.docx
-*.pdf
+# Build directories
+/build/
+/bin/
 
 # IDE and editor files
 .vscode/
 *.code-workspace
 .idea/
+*.vcxproj*
+*.sln
 *.swp
 *.swo
-*~
 
 # OS generated files
 .DS_Store
 Thumbs.db
 desktop.ini
+Desktop.ini
+
+# Temporary and backup files
+*~
+*.bak
+*.tmp
+
+# Documentation files (keeping only README)
+*.docx
+*.pdf
 
 # Temporary files
 *.tmp
