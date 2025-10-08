@@ -1,0 +1,30 @@
+# Compiled executables
+*.exe
+*.out
+*.o
+*.obj
+
+# Documentation files (keeping only README)
+*.docx
+*.pdf
+
+# IDE and editor files
+.vscode/
+*.code-workspace
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Batch files
+*.bat
