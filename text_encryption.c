@@ -1,16 +1,20 @@
-#include <iostream>
-#include <string>
-#include <cctype>
-#include <limits>
-
-using namespace std;
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 
 // ==================== DYNAMIC INPUT HANDLING ====================
 
 // Java-style dynamic input - handles unlimited length
-string getDynamicInput() {
-    string input;
-    getline(cin, input);
+char* getDynamicInput() {
+    char* input = NULL;
+    size_t size = 0;
+    long len = getline(&input, &size, stdin);
+    
+    if (len > 0 && input[len - 1] == '\n') {
+        input[len - 1] = '\0';
+    }
+    
     return input;
 }
 
@@ -22,34 +26,40 @@ int validateCaesarShift(int shift) {
     return shift;
 }
 
-string validateVigenereKey(const string& key) {
-    string validKey;
+char* validateVigenereKey(const char* key) {
+    size_t len = strlen(key);
+    char* validKey = (char*)malloc(len + 1);
+    size_t j = 0;
     
-    for (char c : key) {
-        if (isalpha(c)) {
-            validKey += toupper(c);
+    for (size_t i = 0; i < len; i++) {
+        if (isalpha(key[i])) {
+            validKey[j++] = toupper(key[i]);
         }
     }
     
     // If no valid characters, default to 'A'
-    if (validKey.empty()) {
-        validKey = "A";
+    if (j == 0) {
+        validKey[0] = 'A';
+        j = 1;
     }
     
+    validKey[j] = '\0';
     return validKey;
 }
 
 // ==================== ENCRYPTION ALGORITHMS ====================
 
 // Caesar Cipher Encryption
-string caesarEncrypt(const string& plaintext, int shift) {
-    string ciphertext = plaintext;
+char* caesarEncrypt(const char* plaintext, int shift) {
+    size_t len = strlen(plaintext);
+    char* ciphertext = (char*)malloc(len + 1);
+    strcpy(ciphertext, plaintext);
     shift = validateCaesarShift(shift);
     
-    for (char& c : ciphertext) {
-        if (isalpha(c)) {
-            char base = isupper(c) ? 'A' : 'a';
-            c = ((c - base + shift) % 26) + base;
+    for (size_t i = 0; i < len; i++) {
+        if (isalpha(ciphertext[i])) {
+            char base = isupper(ciphertext[i]) ? 'A' : 'a';
+            ciphertext[i] = ((ciphertext[i] - base + shift) % 26) + base;
         }
     }
     
@@ -57,215 +67,266 @@ string caesarEncrypt(const string& plaintext, int shift) {
 }
 
 // Caesar Cipher Decryption
-string caesarDecrypt(const string& ciphertext, int shift) {
+char* caesarDecrypt(const char* ciphertext, int shift) {
     return caesarEncrypt(ciphertext, 26 - validateCaesarShift(shift));
 }
 
 // Vigenère Cipher Encryption
-string vigenereEncrypt(const string& plaintext, const string& key) {
-    string ciphertext = plaintext;
-    string validKey = validateVigenereKey(key);
-    int keyLen = validKey.length();
+char* vigenereEncrypt(const char* plaintext, const char* key) {
+    size_t len = strlen(plaintext);
+    char* ciphertext = (char*)malloc(len + 1);
+    strcpy(ciphertext, plaintext);
+    char* validKey = validateVigenereKey(key);
+    int keyLen = strlen(validKey);
     int keyIndex = 0;
     
-    for (char& c : ciphertext) {
-        if (isalpha(c)) {
-            char base = isupper(c) ? 'A' : 'a';
+    for (size_t i = 0; i < len; i++) {
+        if (isalpha(ciphertext[i])) {
+            char base = isupper(ciphertext[i]) ? 'A' : 'a';
             int shift = validKey[keyIndex % keyLen] - 'A';
-            c = ((c - base + shift) % 26) + base;
+            ciphertext[i] = ((ciphertext[i] - base + shift) % 26) + base;
             keyIndex++;
         }
     }
     
+    free(validKey);
     return ciphertext;
 }
 
 // Vigenère Cipher Decryption
-string vigenereDecrypt(const string& ciphertext, const string& key) {
-    string plaintext = ciphertext;
-    string validKey = validateVigenereKey(key);
-    int keyLen = validKey.length();
+char* vigenereDecrypt(const char* ciphertext, const char* key) {
+    size_t len = strlen(ciphertext);
+    char* plaintext = (char*)malloc(len + 1);
+    strcpy(plaintext, ciphertext);
+    char* validKey = validateVigenereKey(key);
+    int keyLen = strlen(validKey);
     int keyIndex = 0;
     
-    for (char& c : plaintext) {
-        if (isalpha(c)) {
-            char base = isupper(c) ? 'A' : 'a';
+    for (size_t i = 0; i < len; i++) {
+        if (isalpha(plaintext[i])) {
+            char base = isupper(plaintext[i]) ? 'A' : 'a';
             int shift = validKey[keyIndex % keyLen] - 'A';
-            c = ((c - base - shift + 26) % 26) + base;
+            plaintext[i] = ((plaintext[i] - base - shift + 26) % 26) + base;
             keyIndex++;
         }
     }
     
+    free(validKey);
     return plaintext;
 }
 
 // ==================== CIPHER CONVERSION ====================
 
 // Convert Caesar encrypted text to Vigenère encryption
-string caesarToVigenere(const string& caesarText, int caesarShift, const string& vigenereKey) {
+char* caesarToVigenere(const char* caesarText, int caesarShift, const char* vigenereKey) {
     // Decrypt Caesar first
-    string decrypted = caesarDecrypt(caesarText, caesarShift);
+    char* decrypted = caesarDecrypt(caesarText, caesarShift);
     // Then encrypt with Vigenère
-    return vigenereEncrypt(decrypted, vigenereKey);
+    char* result = vigenereEncrypt(decrypted, vigenereKey);
+    free(decrypted);
+    return result;
 }
 
 // Convert Vigenère encrypted text to Caesar encryption
-string vigenereToCaesar(const string& vigenereText, const string& vigenereKey, int caesarShift) {
+char* vigenereToCaesar(const char* vigenereText, const char* vigenereKey, int caesarShift) {
     // Decrypt Vigenère first
-    string decrypted = vigenereDecrypt(vigenereText, vigenereKey);
+    char* decrypted = vigenereDecrypt(vigenereText, vigenereKey);
     // Then encrypt with Caesar
-    return caesarEncrypt(decrypted, caesarShift);
+    char* result = caesarEncrypt(decrypted, caesarShift);
+    free(decrypted);
+    return result;
 }
 
 // ==================== MENU DISPLAY ====================
 
 void displayMenu() {
-    cout << "\n┌──────────────────────────────────────────────────────────┐\n";
-    cout << "│                     MAIN MENU                            │\n";
-    cout << "├──────────────────────────────────────────────────────────┤\n";
-    cout << "│  CAESAR CIPHER                                           │\n";
-    cout << "│    1. Encrypt Text (Caesar)                              │\n";
-    cout << "│    2. Decrypt Text (Caesar)                              │\n";
-    cout << "│                                                          │\n";
-    cout << "│  VIGENÈRE CIPHER                                         │\n";
-    cout << "│    3. Encrypt Text (Vigenère)                            │\n";
-    cout << "│    4. Decrypt Text (Vigenère)                            │\n";
-    cout << "│                                                          │\n";
-    cout << "│  CIPHER CONVERSION                                       │\n";
-    cout << "│    5. Convert Caesar → Vigenère                          │\n";
-    cout << "│    6. Convert Vigenère → Caesar                          │\n";
-    cout << "│                                                          │\n";
-    cout << "│    0. Exit                                               │\n";
-    cout << "└──────────────────────────────────────────────────────────┘\n";
+    printf("\n┌──────────────────────────────────────────────────────────┐\n");
+    printf("│                     MAIN MENU                            │\n");
+    printf("├──────────────────────────────────────────────────────────┤\n");
+    printf("│  CAESAR CIPHER                                           │\n");
+    printf("│    1. Encrypt Text (Caesar)                              │\n");
+    printf("│    2. Decrypt Text (Caesar)                              │\n");
+    printf("│                                                          │\n");
+    printf("│  VIGENÈRE CIPHER                                         │\n");
+    printf("│    3. Encrypt Text (Vigenère)                            │\n");
+    printf("│    4. Decrypt Text (Vigenère)                            │\n");
+    printf("│                                                          │\n");
+    printf("│  CIPHER CONVERSION                                       │\n");
+    printf("│    5. Convert Caesar → Vigenère                          │\n");
+    printf("│    6. Convert Vigenère → Caesar                          │\n");
+    printf("│                                                          │\n");
+    printf("│    0. Exit                                               │\n");
+    printf("└──────────────────────────────────────────────────────────┘\n");
 }
 
 // ==================== MAIN PROGRAM ====================
 
 int main() {
     int choice;
-    string input, result, key;
+    char* input = NULL;
+    char* result = NULL;
+    char* key = NULL;
     int shift;
     
-    cout << "╔══════════════════════════════════════════════════════════╗\n";
-    cout << "║   SECURE TEXT ENCRYPTION & DECRYPTION TOOL              ║\n";
-    cout << "║   Advanced Cryptographic Communication System            ║\n";
-    cout << "╚══════════════════════════════════════════════════════════╝\n";
+    printf("╔══════════════════════════════════════════════════════════╗\n");
+    printf("║   SECURE TEXT ENCRYPTION & DECRYPTION TOOL              ║\n");
+    printf("║   Advanced Cryptographic Communication System            ║\n");
+    printf("╚══════════════════════════════════════════════════════════╝\n");
     
-    while (true) {
+    while (1) {
         displayMenu();
-        cout << "Enter your choice: ";
-        cin >> choice;
-        cin.ignore(); // Clear the newline after number input
+        printf("Enter your choice: ");
+        scanf("%d", &choice);
+        getchar(); // Clear the newline after number input
         
         switch (choice) {
             case 1: // Caesar Cipher Encryption
-                cout << "\n--- Caesar Cipher Encryption ---\n";
-                cout << "Enter plaintext: ";
+                printf("\n--- Caesar Cipher Encryption ---\n");
+                printf("Enter plaintext: ");
                 input = getDynamicInput();
                 
-                cout << "Enter shift value (1-25): ";
-                cin >> shift;
-                cin.ignore();
+                printf("Enter shift value (1-25): ");
+                scanf("%d", &shift);
+                getchar();
                 
                 shift = validateCaesarShift(shift);
                 result = caesarEncrypt(input, shift);
                 
-                cout << "\n✓ Encrypted Text: " << result << "\n";
-                cout << "Shift Used: " << shift << "\n\n";
+                printf("\n✓ Encrypted Text: %s\n", result);
+                printf("Shift Used: %d\n\n", shift);
+                
+                free(input);
+                free(result);
                 break;
                 
             case 2: // Caesar Cipher Decryption
-                cout << "\n--- Caesar Cipher Decryption ---\n";
-                cout << "Enter ciphertext: ";
+                printf("\n--- Caesar Cipher Decryption ---\n");
+                printf("Enter ciphertext: ");
                 input = getDynamicInput();
                 
-                cout << "Enter shift value (1-25): ";
-                cin >> shift;
-                cin.ignore();
+                printf("Enter shift value (1-25): ");
+                scanf("%d", &shift);
+                getchar();
                 
                 shift = validateCaesarShift(shift);
                 result = caesarDecrypt(input, shift);
                 
-                cout << "\n✓ Decrypted Text: " << result << "\n\n";
+                printf("\n✓ Decrypted Text: %s\n\n", result);
+                
+                free(input);
+                free(result);
                 break;
                 
             case 3: // Vigenère Cipher Encryption
-                cout << "\n--- Vigenère Cipher Encryption ---\n";
-                cout << "Enter plaintext: ";
+                printf("\n--- Vigenère Cipher Encryption ---\n");
+                printf("Enter plaintext: ");
                 input = getDynamicInput();
                 
-                cout << "Enter key (alphabets only): ";
+                printf("Enter key (alphabets only): ");
                 key = getDynamicInput();
-                key = validateVigenereKey(key);
                 
-                result = vigenereEncrypt(input, key);
+                {
+                    char* validKey = validateVigenereKey(key);
+                    result = vigenereEncrypt(input, validKey);
+                    
+                    printf("\n✓ Encrypted Text: %s\n", result);
+                    printf("Key Used: %s\n\n", validKey);
+                    
+                    free(validKey);
+                }
                 
-                cout << "\n✓ Encrypted Text: " << result << "\n";
-                cout << "Key Used: " << key << "\n\n";
+                free(input);
+                free(key);
+                free(result);
                 break;
                 
             case 4: // Vigenère Cipher Decryption
-                cout << "\n--- Vigenère Cipher Decryption ---\n";
-                cout << "Enter ciphertext: ";
+                printf("\n--- Vigenère Cipher Decryption ---\n");
+                printf("Enter ciphertext: ");
                 input = getDynamicInput();
                 
-                cout << "Enter key (alphabets only): ";
+                printf("Enter key (alphabets only): ");
                 key = getDynamicInput();
-                key = validateVigenereKey(key);
                 
-                result = vigenereDecrypt(input, key);
+                {
+                    char* validKey = validateVigenereKey(key);
+                    result = vigenereDecrypt(input, validKey);
+                    
+                    printf("\n✓ Decrypted Text: %s\n\n", result);
+                    
+                    free(validKey);
+                }
                 
-                cout << "\n✓ Decrypted Text: " << result << "\n\n";
+                free(input);
+                free(key);
+                free(result);
                 break;
                 
             case 5: // Caesar to Vigenère Conversion
-                cout << "\n--- Convert Caesar to Vigenère ---\n";
-                cout << "Enter Caesar encrypted text: ";
+                printf("\n--- Convert Caesar to Vigenère ---\n");
+                printf("Enter Caesar encrypted text: ");
                 input = getDynamicInput();
                 
-                cout << "Enter Caesar shift used: ";
-                cin >> shift;
-                cin.ignore();
+                printf("Enter Caesar shift used: ");
+                scanf("%d", &shift);
+                getchar();
                 
-                cout << "Enter new Vigenère key: ";
+                printf("Enter new Vigenère key: ");
                 key = getDynamicInput();
-                key = validateVigenereKey(key);
                 
-                result = caesarToVigenere(input, shift, key);
+                {
+                    char* validKey = validateVigenereKey(key);
+                    result = caesarToVigenere(input, shift, validKey);
+                    
+                    printf("\n✓ Converted to Vigenère: %s\n", result);
+                    printf("New Key: %s\n\n", validKey);
+                    
+                    free(validKey);
+                }
                 
-                cout << "\n✓ Converted to Vigenère: " << result << "\n";
-                cout << "New Key: " << key << "\n\n";
+                free(input);
+                free(key);
+                free(result);
                 break;
                 
             case 6: // Vigenère to Caesar Conversion
-                cout << "\n--- Convert Vigenère to Caesar ---\n";
-                cout << "Enter Vigenère encrypted text: ";
+                printf("\n--- Convert Vigenère to Caesar ---\n");
+                printf("Enter Vigenère encrypted text: ");
                 input = getDynamicInput();
                 
-                cout << "Enter Vigenère key used: ";
+                printf("Enter Vigenère key used: ");
                 key = getDynamicInput();
-                key = validateVigenereKey(key);
                 
-                cout << "Enter new Caesar shift: ";
-                cin >> shift;
-                cin.ignore();
+                {
+                    char* validKey = validateVigenereKey(key);
+                    
+                    printf("Enter new Caesar shift: ");
+                    scanf("%d", &shift);
+                    getchar();
+                    
+                    shift = validateCaesarShift(shift);
+                    result = vigenereToCaesar(input, validKey, shift);
+                    
+                    printf("\n✓ Converted to Caesar: %s\n", result);
+                    printf("New Shift: %d\n\n", shift);
+                    
+                    free(validKey);
+                }
                 
-                shift = validateCaesarShift(shift);
-                result = vigenereToCaesar(input, key, shift);
-                
-                cout << "\n✓ Converted to Caesar: " << result << "\n";
-                cout << "New Shift: " << shift << "\n\n";
+                free(input);
+                free(key);
+                free(result);
                 break;
                 
             case 0:
-                cout << "\n╔══════════════════════════════════════════════════════════╗\n";
-                cout << "║   Thank you for using Secure Encryption Tool!          ║\n";
-                cout << "║   Stay secure! 🔒                                       ║\n";
-                cout << "╚══════════════════════════════════════════════════════════╝\n\n";
+                printf("\n╔══════════════════════════════════════════════════════════╗\n");
+                printf("║   Thank you for using Secure Encryption Tool!          ║\n");
+                printf("║   Stay secure! 🔒                                       ║\n");
+                printf("╚══════════════════════════════════════════════════════════╝\n\n");
                 return 0;
                 
             default:
-                cout << "\n❌ Invalid choice! Please try again.\n";
+                printf("\n❌ Invalid choice! Please try again.\n");
         }
     }
     
