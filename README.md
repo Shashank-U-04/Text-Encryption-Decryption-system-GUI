@@ -1,36 +1,36 @@
 # Text Encryption and Decryption Tool
 
-A Data Structures mini project implementing a text encryption and decryption system using Caesar Cipher and Vigenère Cipher in C++.
+A Data Structures mini project implementing a text encryption and decryption system using Caesar Cipher and Vigenère Cipher in C.
 
 ## Overview
 
-This project demonstrates the practical application of encryption algorithms in a user-friendly console application. The program implements both Caesar Cipher and Vigenère Cipher techniques with additional cipher conversion capabilities.
+This project demonstrates the practical application of encryption algorithms in a user-friendly console application. The program implements both Caesar Cipher and Vigenère Cipher techniques with additional cipher conversion capabilities using pure C.
 
 ## Features
 
 - **Caesar Cipher Encryption/Decryption**: Shift-based encryption with customizable shift values
 - **Vigenère Cipher Encryption/Decryption**: Key-based polyalphabetic encryption
 - **Cipher Conversion**: Convert between Caesar and Vigenère encrypted text
-- **Dynamic Input Handling**: Supports unlimited text length input
+- **Dynamic Input Handling**: Supports unlimited text length input using `getline()`
 - **User-friendly Interface**: Interactive menu-driven program
 - **Input Validation**: Automatic validation and sanitization of keys and shift values
 
 ## Requirements
 
-- C++ compiler supporting C++11 or later (g++, clang++, MSVC)
+- C compiler (GCC, Clang, or MSVC)
 - Windows/Linux/macOS operating system
 
 ## Compilation and Execution
 
-### On Windows (using g++):
+### On Windows (using GCC/MinGW):
 ```powershell
-g++ text_encryption.cpp -o text_encryption.exe
+gcc text_encryption.c -o text_encryption.exe
 .\text_encryption.exe
 ```
 
 ### On Linux/Mac:
 ```bash
-g++ text_encryption.cpp -o text_encryption
+gcc text_encryption.c -o text_encryption
 ./text_encryption
 ```
 
@@ -49,16 +49,16 @@ g++ text_encryption.cpp -o text_encryption
 
 ```
 DS-Text-Encryption-Project/
-├── text_encryption.cpp     # Main source code (C++)
-├── .gitignore             # Git ignore rules
-└── README.md              # Project documentation
+├── text_encryption.c      # Main source code (C)
+├── .gitignore            # Git ignore rules
+└── README.md             # Project documentation
 ```
 
 ## Academic Information
 
 - **Course**: Data Structures
 - **Project Type**: Mini Project
-- **Implementation Language**: C++
+- **Implementation Language**: C
 - **Date**: October 2025
 
 ## Author
