@@ -189,29 +189,29 @@ char* vigenereToCaesar(const char* vigenereText, const char* vigenereKey, int ca
 // ==================== MENU DISPLAY ====================
 
 void displayMenu() {
-    printf("\n┌──────────────────────────────────────────────────────────┐\n");
-    printf("│                     MAIN MENU                            │\n");
-    printf("├──────────────────────────────────────────────────────────┤\n");
-    printf("│  CAESAR CIPHER                                           │\n");
-    printf("│    1. Encrypt Text (Caesar)                              │\n");
-    printf("│    2. Decrypt Text (Caesar)                              │\n");
-    printf("│                                                          │\n");
-    printf("│  VIGENÈRE CIPHER                                         │\n");
-    printf("│    3. Encrypt Text (Vigenère)                            │\n");
-    printf("│    4. Decrypt Text (Vigenère)                            │\n");
-    printf("│                                                          │\n");
-    printf("│  CIPHER CONVERSION                                       │\n");
-    printf("│    5. Convert Caesar → Vigenère                          │\n");
-    printf("│    6. Convert Vigenère → Caesar                          │\n");
-    printf("│                                                          │\n");
-    printf("│  FILE-BASED OPERATIONS                                   │\n");
-    printf("│    7. Encrypt File (Caesar)                              │\n");
-    printf("│    8. Decrypt File (Caesar)                              │\n");
-    printf("│    9. Encrypt File (Vigenère)                            │\n");
-    printf("│   10. Decrypt File (Vigenère)                            │\n");
-    printf("│                                                          │\n");
-    printf("│    0. Exit                                               │\n");
-    printf("└──────────────────────────────────────────────────────────┘\n");
+    printf("\n+------------------------------------------------------------+\n");
+    printf("|                     MAIN MENU                              |\n");
+    printf("+------------------------------------------------------------+\n");
+    printf("|  CAESAR CIPHER                                             |\n");
+    printf("|    1. Encrypt Text (Caesar)                                |\n");
+    printf("|    2. Decrypt Text (Caesar)                                |\n");
+    printf("|                                                            |\n");
+    printf("|  VIGENERE CIPHER                                           |\n");
+    printf("|    3. Encrypt Text (Vigenere)                              |\n");
+    printf("|    4. Decrypt Text (Vigenere)                              |\n");
+    printf("|                                                            |\n");
+    printf("|  CIPHER CONVERSION                                         |\n");
+    printf("|    5. Convert Caesar -> Vigenere                           |\n");
+    printf("|    6. Convert Vigenere -> Caesar                           |\n");
+    printf("|                                                            |\n");
+    printf("|  FILE-BASED OPERATIONS                                     |\n");
+    printf("|    7. Encrypt File (Caesar)                                |\n");
+    printf("|    8. Decrypt File (Caesar)                                |\n");
+    printf("|    9. Encrypt File (Vigenere)                              |\n");
+    printf("|   10. Decrypt File (Vigenere)                              |\n");
+    printf("|                                                            |\n");
+    printf("|    0. Exit                                                 |\n");
+    printf("+------------------------------------------------------------+\n");
 }
 
 // ==================== MAIN PROGRAM ====================
@@ -225,10 +225,10 @@ int main() {
     char* outputFile = NULL;
     int shift;
     
-    printf("╔══════════════════════════════════════════════════════════╗\n");
-    printf("║   SECURE TEXT ENCRYPTION & DECRYPTION TOOL              ║\n");
-    printf("║   Advanced Cryptographic Communication System            ║\n");
-    printf("╚══════════════════════════════════════════════════════════╝\n");
+    printf("+============================================================+\n");
+    printf("|   SECURE TEXT ENCRYPTION & DECRYPTION TOOL                |\n");
+    printf("|   Advanced Cryptographic Communication System             |\n");
+    printf("+============================================================+\n");
     
     while (1) {
         displayMenu();
@@ -510,14 +510,14 @@ int main() {
                 break;
                 
             case 0:
-                printf("\n╔══════════════════════════════════════════════════════════╗\n");
-                printf("║   Thank you for using Secure Encryption Tool!          ║\n");
-                printf("║   Stay secure! 🔒                                       ║\n");
-                printf("╚══════════════════════════════════════════════════════════╝\n\n");
+                printf("\n+============================================================+\n");
+                printf("|   Thank you for using Secure Encryption Tool!            |\n");
+                printf("|   Stay secure!                                            |\n");
+                printf("+============================================================+\n\n");
                 return 0;
                 
             default:
-                printf("\n❌ Invalid choice! Please try again.\n");
+                printf("\n[X] Invalid choice! Please try again.\n");
         }
     }
     
