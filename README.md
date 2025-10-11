@@ -29,7 +29,7 @@ This project demonstrates the practical application of encryption algorithms in 
 
 - C compiler (GCC, Clang, or MSVC)
 - Windows/Linux/macOS operating system
-- Terminal with UTF-8 support (recommended: Windows Terminal, VS Code terminal)
+- Any terminal or command prompt (no special encoding required)
 
 ## Compilation and Execution
 
@@ -38,17 +38,9 @@ This project demonstrates the practical application of encryption algorithms in 
 # Compile the program
 gcc text_encryption.c -o text_encryption.exe
 
-# Set UTF-8 encoding for proper display (if using PowerShell)
-chcp 65001
-
 # Run the program
 .\text_encryption.exe
 ```
-
-**Note for Windows users:** If you see garbled characters in the menu, use one of these solutions:
-- Use **Windows Terminal** (recommended - has better Unicode support)
-- Use **VS Code integrated terminal**
-- Or run `chcp 65001` before executing the program to enable UTF-8 encoding
 
 ### On Linux/Mac:
 ```bash
@@ -58,6 +50,8 @@ gcc text_encryption.c -o text_encryption
 # Run the program
 ./text_encryption
 ```
+
+**Note:** The program uses standard ASCII characters for display, so it works on any terminal without special encoding settings.
 
 ## Usage
 
@@ -92,8 +86,9 @@ Enter key: KEY
 ```
 Enter input file name: plain.txt
 Enter shift value: 3
-Enter output file name: encrypted.txt
-✓ File encrypted successfully!
+Enter output file name: cesarencrypt.txt
+[OK] File encrypted successfully!
+Shift Used: 3
 ```
 
 ## Project Structure
@@ -101,6 +96,9 @@ Enter output file name: encrypted.txt
 ```
 DS-Text-Encryption-Project/
 ├── text_encryption.c      # Main source code (C)
+├── text_encryption.exe    # Compiled executable (Windows)
+├── plain.txt              # Sample plaintext file for testing
+├── cesarencrypt.txt       # Sample encrypted file (Caesar, shift=3)
 ├── .gitignore            # Git ignore rules
 └── README.md             # Project documentation
 ```
@@ -120,12 +118,20 @@ Data Structures Mini Project
 
 This is an academic project for educational purposes.
 
+## Technical Details
+
+- **Character Encoding**: Uses standard ASCII characters for universal terminal compatibility
+- **Memory Management**: Dynamic memory allocation with proper cleanup (malloc/free)
+- **Input Handling**: Supports unlimited input length using getline()
+- **Cross-Platform**: Works on Windows, Linux, and macOS
+
 ## Future Enhancements
 
-- Add more encryption algorithms (ROT13, Playfair cipher)
-- File encryption and decryption support
+- Add more encryption algorithms (ROT13, Playfair cipher, Substitution cipher)
+- Implement file batch processing
+- Add frequency analysis tools for cryptanalysis
 - GUI interface
-- Password protection
-- Multiple encryption layers
+- Password protection with hashing
+- Multiple encryption layers (hybrid encryption)
 
 This is an academic project. Suggestions and improvements are welcome for learning purposes.
