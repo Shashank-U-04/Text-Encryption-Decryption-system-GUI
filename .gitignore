@@ -4,10 +4,17 @@
 *.o
 *.obj
 *.exe.stackdump
+*.a
+*.lib
+*.dll
+*.so
+*.dylib
 
 # Build directories
 /build/
 /bin/
+/dist/
+/target/
 
 # IDE and editor files
 .vscode/
@@ -17,26 +24,35 @@
 *.sln
 *.swp
 *.swo
+*.suo
+*.user
+.vs/
 
 # OS generated files
 .DS_Store
 Thumbs.db
 desktop.ini
 Desktop.ini
+ehthumbs.db
+*.lnk
 
 # Temporary and backup files
 *~
 *.bak
 *.tmp
-
-# Documentation files (keeping only README)
-*.docx
-*.pdf
-
-# Temporary files
-*.tmp
 *.temp
 *.log
+*.old
+*.orig
 
-# Batch files
-*.bat
+# Test/example encrypted files (optional - uncomment if needed)
+# *encrypt*.txt
+# *decrypt*.txt
+# plain.txt
+# cipher.txt
+
+# Documentation files (keeping only README.md)
+*.docx
+*.pdf
+*.ppt
+*.pptx

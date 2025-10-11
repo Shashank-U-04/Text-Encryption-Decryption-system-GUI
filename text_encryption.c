@@ -47,6 +47,55 @@ char* validateVigenereKey(const char* key) {
     return validKey;
 }
 
+// ==================== FILE I/O FUNCTIONS ====================
+
+// Read content from file
+char* readFromFile(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("\n❌ Error: Unable to open file '%s'\n", filename);
+        printf("   Please check if the file exists and you have read permissions.\n\n");
+        return NULL;
+    }
+    
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+    
+    if (fileSize == 0) {
+        printf("\n⚠️  Warning: File '%s' is empty.\n\n", filename);
+        fclose(file);
+        return NULL;
+    }
+    
+    // Allocate memory and read content
+    char* content = (char*)malloc(fileSize + 1);
+    size_t bytesRead = fread(content, 1, fileSize, file);
+    content[bytesRead] = '\0';
+    
+    fclose(file);
+    
+    printf("✓ Successfully read %ld bytes from '%s'\n", bytesRead, filename);
+    return content;
+}
+
+// Write content to file
+int writeToFile(const char* filename, const char* content) {
+    FILE* file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("\n❌ Error: Unable to create/write to file '%s'\n", filename);
+        printf("   Please check if you have write permissions in this directory.\n\n");
+        return 0;
+    }
+    
+    size_t bytesWritten = fwrite(content, 1, strlen(content), file);
+    fclose(file);
+    
+    printf("✓ Successfully wrote %zu bytes to '%s'\n\n", bytesWritten, filename);
+    return 1;
+}
+
 // ==================== ENCRYPTION ALGORITHMS ====================
 
 // Caesar Cipher Encryption
@@ -155,6 +204,12 @@ void displayMenu() {
     printf("│    5. Convert Caesar → Vigenère                          │\n");
     printf("│    6. Convert Vigenère → Caesar                          │\n");
     printf("│                                                          │\n");
+    printf("│  FILE-BASED OPERATIONS                                   │\n");
+    printf("│    7. Encrypt File (Caesar)                              │\n");
+    printf("│    8. Decrypt File (Caesar)                              │\n");
+    printf("│    9. Encrypt File (Vigenère)                            │\n");
+    printf("│   10. Decrypt File (Vigenère)                            │\n");
+    printf("│                                                          │\n");
     printf("│    0. Exit                                               │\n");
     printf("└──────────────────────────────────────────────────────────┘\n");
 }
@@ -166,6 +221,8 @@ int main() {
     char* input = NULL;
     char* result = NULL;
     char* key = NULL;
+    char* inputFile = NULL;
+    char* outputFile = NULL;
     int shift;
     
     printf("╔══════════════════════════════════════════════════════════╗\n");
@@ -313,6 +370,140 @@ int main() {
                     free(validKey);
                 }
                 
+                free(input);
+                free(key);
+                free(result);
+                break;
+                
+            case 7: // Encrypt File (Caesar)
+                printf("\n--- Encrypt File (Caesar Cipher) ---\n");
+                printf("Enter input file name: ");
+                inputFile = getDynamicInput();
+                
+                input = readFromFile(inputFile);
+                if (input == NULL) {
+                    free(inputFile);
+                    break;
+                }
+                
+                printf("Enter shift value (1-25): ");
+                scanf("%d", &shift);
+                getchar();
+                
+                printf("Enter output file name: ");
+                outputFile = getDynamicInput();
+                
+                shift = validateCaesarShift(shift);
+                result = caesarEncrypt(input, shift);
+                
+                if (writeToFile(outputFile, result)) {
+                    printf("✓ File encrypted successfully!\n");
+                    printf("Shift Used: %d\n\n", shift);
+                }
+                
+                free(inputFile);
+                free(outputFile);
+                free(input);
+                free(result);
+                break;
+                
+            case 8: // Decrypt File (Caesar)
+                printf("\n--- Decrypt File (Caesar Cipher) ---\n");
+                printf("Enter input file name: ");
+                inputFile = getDynamicInput();
+                
+                input = readFromFile(inputFile);
+                if (input == NULL) {
+                    free(inputFile);
+                    break;
+                }
+                
+                printf("Enter shift value (1-25): ");
+                scanf("%d", &shift);
+                getchar();
+                
+                printf("Enter output file name: ");
+                outputFile = getDynamicInput();
+                
+                shift = validateCaesarShift(shift);
+                result = caesarDecrypt(input, shift);
+                
+                if (writeToFile(outputFile, result)) {
+                    printf("✓ File decrypted successfully!\n\n");
+                }
+                
+                free(inputFile);
+                free(outputFile);
+                free(input);
+                free(result);
+                break;
+                
+            case 9: // Encrypt File (Vigenère)
+                printf("\n--- Encrypt File (Vigenère Cipher) ---\n");
+                printf("Enter input file name: ");
+                inputFile = getDynamicInput();
+                
+                input = readFromFile(inputFile);
+                if (input == NULL) {
+                    free(inputFile);
+                    break;
+                }
+                
+                printf("Enter key (alphabets only): ");
+                key = getDynamicInput();
+                
+                printf("Enter output file name: ");
+                outputFile = getDynamicInput();
+                
+                {
+                    char* validKey = validateVigenereKey(key);
+                    result = vigenereEncrypt(input, validKey);
+                    
+                    if (writeToFile(outputFile, result)) {
+                        printf("✓ File encrypted successfully!\n");
+                        printf("Key Used: %s\n\n", validKey);
+                    }
+                    
+                    free(validKey);
+                }
+                
+                free(inputFile);
+                free(outputFile);
+                free(input);
+                free(key);
+                free(result);
+                break;
+                
+            case 10: // Decrypt File (Vigenère)
+                printf("\n--- Decrypt File (Vigenère Cipher) ---\n");
+                printf("Enter input file name: ");
+                inputFile = getDynamicInput();
+                
+                input = readFromFile(inputFile);
+                if (input == NULL) {
+                    free(inputFile);
+                    break;
+                }
+                
+                printf("Enter key (alphabets only): ");
+                key = getDynamicInput();
+                
+                printf("Enter output file name: ");
+                outputFile = getDynamicInput();
+                
+                {
+                    char* validKey = validateVigenereKey(key);
+                    result = vigenereDecrypt(input, validKey);
+                    
+                    if (writeToFile(outputFile, result)) {
+                        printf("✓ File decrypted successfully!\n\n");
+                    }
+                    
+                    free(validKey);
+                }
+                
+                free(inputFile);
+                free(outputFile);
                 free(input);
                 free(key);
                 free(result);
