@@ -9,6 +9,11 @@
 *.dll
 *.so
 *.dylib
+*.pdb
+*.ilk
+*.exp
+*.map
+*.dSYM/
 
 # Build directories
 /build/

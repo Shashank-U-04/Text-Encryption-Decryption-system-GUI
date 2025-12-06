@@ -9,21 +9,28 @@ This project demonstrates the practical application of encryption algorithms in 
 ## Features
 
 ### Text-Based Operations
-- **Caesar Cipher Encryption/Decryption**: Shift-based encryption with customizable shift values (1-25)
-- **Vigenère Cipher Encryption/Decryption**: Key-based polyalphabetic encryption
-- **Cipher Conversion**: Convert between Caesar and Vigenère encrypted text
+- **Caesar Cipher Encryption/Decryption**: Shift-based encryption with customizable shift values (1-25).
+- **Vigenère Cipher Encryption/Decryption**: Key-based polyalphabetic encryption.
+- **Cipher Conversion**: Convert between Caesar and Vigenère encrypted text.
 
 ### File-Based Operations
-- **File Encryption (Caesar)**: Encrypt entire files using Caesar cipher
-- **File Decryption (Caesar)**: Decrypt Caesar-encrypted files
-- **File Encryption (Vigenère)**: Encrypt entire files using Vigenère cipher
-- **File Decryption (Vigenère)**: Decrypt Vigenère-encrypted files
+- **File Encryption (Caesar)**: Encrypt entire files using Caesar cipher.
+- **File Decryption (Caesar)**: Decrypt Caesar-encrypted files.
+- **File Encryption (Vigenère)**: Encrypt entire files using Vigenère cipher.
+- **File Decryption (Vigenère)**: Decrypt Vigenère-encrypted files.
 
 ### Additional Features
-- **Dynamic Input Handling**: Supports unlimited text length input using `getline()`
-- **User-friendly Interface**: Interactive menu-driven program with visual formatting
-- **Input Validation**: Automatic validation and sanitization of keys and shift values
-- **Memory Management**: Proper memory allocation and deallocation to prevent memory leaks
+- **Dynamic Input Handling**: Supports unlimited text length input using `getline()` (Java-style dynamic input).
+- **Robust Input Validation**: 
+    - Validates integer inputs for menu choices and shift values.
+    - Validates Vigenère keys to ensure they contain alphabetic characters.
+    - Handles empty inputs gracefully.
+- **Error Handling**: 
+    - Checks for file existence and permissions.
+    - Handles memory allocation failures for large files.
+    - Reports specific errors (e.g., "File empty", "Number too large").
+- **Case Preservation**: Maintains the original case (uppercase/lowercase) of the text during encryption and decryption.
+- **Memory Management**: Proper memory allocation and deallocation to prevent memory leaks.
 
 ## Requirements
 
@@ -71,24 +78,37 @@ gcc text_encryption.c -o text_encryption
 **Caesar Cipher (Text):**
 ```
 Enter plaintext: Hello World
-Enter shift value: 3
-✓ Encrypted Text: Khoor Zruog
+Enter shift value (1-25): 3
+
++ Encrypted Text: Khoor Zruog
+Shift Used: 3
 ```
 
 **Vigenère Cipher (Text):**
 ```
 Enter plaintext: Hello World
-Enter key: KEY
-✓ Encrypted Text: Rijvs Uyvjn
+Enter key (alphabets only): KEY
+
++ Encrypted Text: Rijvs Uyvjn
+Key Used: KEY
 ```
 
 **File Encryption:**
 ```
 Enter input file name: plain.txt
-Enter shift value: 3
+Enter shift value (1-25): 3
 Enter output file name: cesarencrypt.txt
-[OK] File encrypted successfully!
+
++ Successfully read 14 bytes from 'plain.txt'
++ Successfully wrote 14 bytes to 'cesarencrypt.txt'
++ File encrypted successfully!
 Shift Used: 3
+```
+
+**Error Handling Example:**
+```
+Enter your choice: 12
+X Error: 12 is out of range! Please enter a value between 0 and 10.
 ```
 
 ## Project Structure
@@ -120,10 +140,10 @@ This is an academic project for educational purposes.
 
 ## Technical Details
 
-- **Character Encoding**: Uses standard ASCII characters for universal terminal compatibility
-- **Memory Management**: Dynamic memory allocation with proper cleanup (malloc/free)
-- **Input Handling**: Supports unlimited input length using getline()
-- **Cross-Platform**: Works on Windows, Linux, and macOS
+- **Character Encoding**: Uses standard ASCII characters for universal terminal compatibility.
+- **Memory Management**: Dynamic memory allocation with proper cleanup (malloc/free) for strings and file buffers.
+- **Input Handling**: Uses a custom `getDynamicInput()` function that wraps `getline()` to safely handle inputs of any length without buffer overflows.
+- **Cross-Platform**: Works on Windows, Linux, and macOS.
 
 ## Future Enhancements
 
