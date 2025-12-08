@@ -70,4 +70,4 @@ Double-click `SecureCrypt.exe` or run it via command line:
 *   `input.txt` / `output.txt`: Example files for testing.
 
 ## 📝 License
-This project is open-source. Feel free to modify and distribute.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
