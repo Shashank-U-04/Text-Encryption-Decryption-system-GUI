@@ -219,7 +219,7 @@ void ClearAllInputs() {
 void CopyToClipboard() {
     int len = GetWindowTextLength(hEditOutput);
     if(len == 0) {
-        MessageBox(hMainWnd, "Nothing to copy.", "Info", MB_ICONINFORMATION);
+        MessageBox(hMainWnd, "Output is empty; nothing to copy.", "Info", MB_ICONINFORMATION);
         return;
     }
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len + 1);
@@ -231,7 +231,7 @@ void CopyToClipboard() {
     EmptyClipboard();
     SetClipboardData(CF_TEXT, hMem);
     CloseClipboard();
-    MessageBox(hMainWnd, "Copied to clipboard!", "Success", MB_OK);
+    MessageBox(hMainWnd, "Content copied to clipboard.", "Success", MB_OK);
 }
 
 void SaveOutputContent() {
@@ -255,7 +255,7 @@ void SaveOutputContent() {
     ofn.Flags = OFN_OVERWRITEPROMPT;
     
     if(GetSaveFileName(&ofn)) {
-        if(writeFile(ofn.lpstrFile, buf)) MessageBox(hMainWnd, "File saved successfully!", "Success", MB_OK);
+        if(writeFile(ofn.lpstrFile, buf)) MessageBox(hMainWnd, "File saved successfully.", "Success", MB_OK);
         else MessageBox(hMainWnd, "Failed to write file.", "Error", MB_ICONERROR);
     }
     free(buf);
@@ -289,7 +289,7 @@ void UpdateLayout() {
     
     if (currentMode == MODE_CAESAR) {
         SetWindowText(hMainWnd, "Text Encryption - Caesar Cipher");
-        SetWindowText(hGrpSettings, "  Shift Configuration (Shift-based)  "); // Added Hint
+        SetWindowText(hGrpSettings, "  Shift Configuration  ");
         SetWindowText(hLblKey1, "Shift Amount (1-25):");
         
         ShowControl(hLblKey1, TRUE);
@@ -298,8 +298,8 @@ void UpdateLayout() {
         MoveWindow(hEditKey1, 280, 260, 150, 28, TRUE);
     }
     else if (currentMode == MODE_VIGENERE) {
-        SetWindowText(hMainWnd, "Text Encryption - Vigenere Cipher");
-        SetWindowText(hGrpSettings, "  Key Configuration (Key-based)  "); // Added Hint
+        SetWindowText(hMainWnd, "Text Encryption - Vigenère Cipher");
+        SetWindowText(hGrpSettings, "  Key Configuration  ");
         SetWindowText(hLblKey1, "Secret Keyword:");
         
         ShowControl(hLblKey1, TRUE);
@@ -309,11 +309,11 @@ void UpdateLayout() {
     }
     else if (currentMode == MODE_CONVERSION) {
         SetWindowText(hMainWnd, "Text Encryption - Cipher Conversions");
-        SetWindowText(hGrpSettings, "  Conversion Keys (Cross-cipher switch)  "); // Added Hint
+        SetWindowText(hGrpSettings, "  Conversion Configuration  ");
         SetWindowText(hLblInputTitle, "Cipher Text Source");
         
-        SetWindowText(hBtnAction1, "Caesar -> Vigenere");
-        SetWindowText(hBtnAction2, "Vigenere -> Caesar");
+        SetWindowText(hBtnAction1, "Caesar -> Vigenère");
+        SetWindowText(hBtnAction2, "Vigenère -> Caesar");
         
         ShowControl(hLblKey1, TRUE);
         ShowControl(hEditKey1, TRUE);
@@ -338,7 +338,7 @@ void UpdateLayout() {
         // FILE LAYOUT
         ShowControl(hGrpFile, TRUE);
         MoveWindow(hGrpFile, 260, 10, 700, 80, TRUE);
-        SetWindowText(hGrpFile, "  File Selection (Process files)  "); // Added Hint to File Group
+        SetWindowText(hGrpFile, "  File Selection  ");
 
         ShowControl(hEditFilePath, TRUE);
         MoveWindow(hEditFilePath, 280, 40, 500, 28, TRUE);
@@ -422,13 +422,13 @@ void ProcessText(int actionId) {
     }
     
     if (currentMode == MODE_VIGENERE && strlen(key1) == 0) {
-        MessageBox(hMainWnd, "Please enter a Keyword for Vigenere Cipher.", "Missing Key", MB_ICONERROR);
+        MessageBox(hMainWnd, "Please enter a keyword for the Vigenère Cipher.", "Missing Key", MB_ICONERROR);
         return;
     }
     
     int len = GetWindowTextLength(hEditInput);
     if(len == 0) {
-        MessageBox(hMainWnd, "Input box is empty. Please enter text.", "No Input", MB_ICONWARNING);
+        MessageBox(hMainWnd, "Input field is empty. Please enter text to proceed.", "No Input", MB_ICONWARNING);
         return;
     }
     char* input = (char*)malloc(len+1);
@@ -503,7 +503,7 @@ void ProcessFile(int encrypt) {
     if(!res) return;
     
     SetWindowText(hEditOutput, res);
-    MessageBox(hMainWnd, "File processed! Result shown in Output box.\nUse 'Save Result' button to save to file.", "Success", MB_OK);
+    MessageBox(hMainWnd, "File processed successfully. Result displayed in the Output box.", "Success", MB_OK);
     free(res);
 }
 
@@ -523,7 +523,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // Sidebar
             for(int i=0; i<4; i++) {
-                char* labels[] = {"Caesar Cipher", "Vigenere Cipher", "Cipher Conversions", "File Operations"};
+                char* labels[] = {"Caesar Cipher", "Vigenère Cipher", "Cipher Conversions", "File Operations"};
                 hSideBtn[i] = CreateWindow("BUTTON", labels[i], WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, 
                     0, 100 + (i*60), 240, 60, hwnd, (HMENU)(ID_BTN_SIDE_CAESAR + i), NULL, NULL);
             }
@@ -586,7 +586,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             
             hRadioCaesar = CreateWindow("BUTTON", "Caesar Cipher", WS_CHILD | BS_AUTORADIOBUTTON | WS_GROUP, 280, 125, 140, 25, hwnd, (HMENU)ID_RADIO_CAESAR, NULL, NULL);
             SetWindowFont(hRadioCaesar, hFontLabel, TRUE);
-            hRadioVigenere = CreateWindow("BUTTON", "Vigenere Cipher", WS_CHILD | BS_AUTORADIOBUTTON, 450, 125, 150, 25, hwnd, (HMENU)ID_RADIO_VIGENERE, NULL, NULL);
+            hRadioVigenere = CreateWindow("BUTTON", "Vigenère Cipher", WS_CHILD | BS_AUTORADIOBUTTON, 450, 125, 150, 25, hwnd, (HMENU)ID_RADIO_VIGENERE, NULL, NULL);
             SetWindowFont(hRadioVigenere, hFontLabel, TRUE);
             
             SendMessage(hRadioCaesar, BM_SETCHECK, BST_CHECKED, 0);
@@ -695,7 +695,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             SetBkMode(hdc, TRANSPARENT);
             SetTextColor(hdc, APP_COLOR_SIDEBAR_TEXT);
             SelectObject(hdc, hFontHeader);
-            DrawText(hdc, "TEXT ENCRYPTION\nDECRYPTION\nSYSTEM", -1, &rTitle, DT_CENTER);
+            DrawText(hdc, "TEXT ENCRYPTION\n& DECRYPTION\nSYSTEM", -1, &rTitle, DT_CENTER);
             EndPaint(hwnd, &ps);
             break;
         }
