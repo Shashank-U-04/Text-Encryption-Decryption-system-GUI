@@ -3,8 +3,8 @@
 ![C](https://img.shields.io/badge/c-%2300599C.svg?style=for-the-badge&logo=c&logoColor=white)
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 ![MIT License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)
-![GitHub Repo Size](https://img.shields.io/github/repo-size/Shashank-U-04/Text-Encryption-Decryption-System-GUI?style=for-the-badge)
-![GitHub Stars](https://img.shields.io/github/stars/Shashank-U-04/Text-Encryption-Decryption-System-GUI?style=for-the-badge)
+
+## Introduction
 
 A powerful, secure, and user-friendly Windows GUI application for text encryption and decryption. Built using pure C and the Win32 API, this tool supports Caesar and Vigenère ciphers, offering both text-based and file-based operations.
 
