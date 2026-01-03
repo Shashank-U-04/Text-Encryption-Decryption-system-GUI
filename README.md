@@ -94,8 +94,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **LinkedIn:** [Shashank U](https://www.linkedin.com/in/shashank-u-016b54330/)
 - **GitHub:** [Shashank-U-04](https://github.com/Shashank-U-04)
 
-*If you find this project useful, please give it a ⭐ on GitHub!*
-
 ---
 <br>
 <div align="center">
