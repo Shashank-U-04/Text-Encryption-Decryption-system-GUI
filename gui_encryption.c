@@ -37,6 +37,7 @@
 #define ID_BTN_CLEAR        303
 #define ID_BTN_BROWSE       304
 #define ID_BTN_SAVE         305 
+#define ID_BTN_COPY         306
 
 #define ID_RADIO_CAESAR     401
 #define ID_RADIO_VIGENERE   402
@@ -55,7 +56,7 @@ HWND hLblKey1, hEditKey1, hLblKey2, hEditKey2;
 // hLblHelp Removed for clean UI
 HWND hLblFileMsg, hEditFilePath, hBtnBrowse;
 HWND hRadioCaesar, hRadioVigenere;
-HWND hBtnAction1, hBtnAction2, hBtnClear, hBtnSave;
+HWND hBtnAction1, hBtnAction2, hBtnClear, hBtnSave, hBtnCopy;
 HWND hSideBtn[4];
 
 // Fonts & Brushes
@@ -215,6 +216,24 @@ void ClearAllInputs() {
     SetWindowText(hEditFilePath, "");
 }
 
+void CopyToClipboard() {
+    int len = GetWindowTextLength(hEditOutput);
+    if(len == 0) {
+        MessageBox(hMainWnd, "Nothing to copy.", "Info", MB_ICONINFORMATION);
+        return;
+    }
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, len + 1);
+    if(!hMem) return;
+    char* mem = (char*)GlobalLock(hMem);
+    GetWindowText(hEditOutput, mem, len + 1);
+    GlobalUnlock(hMem);
+    OpenClipboard(hMainWnd);
+    EmptyClipboard();
+    SetClipboardData(CF_TEXT, hMem);
+    CloseClipboard();
+    MessageBox(hMainWnd, "Copied to clipboard!", "Success", MB_OK);
+}
+
 void SaveOutputContent() {
     int len = GetWindowTextLength(hEditOutput);
     if(len == 0) {
@@ -253,6 +272,7 @@ void UpdateLayout() {
     ShowControl(hRadioCaesar, FALSE);
     ShowControl(hRadioVigenere, FALSE);
     ShowControl(hBtnSave, FALSE);
+    ShowControl(hBtnCopy, FALSE);
     
     // Show Main Text Controls (Default)
     ShowControl(hGrpMain, TRUE);
@@ -362,19 +382,30 @@ void UpdateLayout() {
     MoveWindow(hBtnClear,   660, yAct, 150, 45, TRUE);
 
     // Output Box
-    int yOut = yAct + 60;
-    int hOutBase = 640 - yOut; 
+    int yLabel = yAct + 60;
+    int yOut = yLabel + 20;
+    
+    ShowControl(hLblOutputTitle, TRUE);
+    MoveWindow(hLblOutputTitle, 260, yLabel, 200, 20, TRUE);
+
+    int btnH = 35; 
+    int padding = 10;
+    int bottomSpace = btnH + padding + 20; // Space for buttons at bottom
+    int availableHeight = 620 - yOut - bottomSpace;
+
+    MoveWindow(hEditOutput, 260, yOut, 700, availableHeight, TRUE);
+    
+    int btnY = yOut + availableHeight + 10;
+    
+    ShowControl(hBtnCopy, TRUE);
     
     if(currentMode == MODE_FILE) {
-        int btnH = 40;
-        int padding = 15;
-        int available = 640 - yOut - btnH - padding;
-        MoveWindow(hEditOutput, 260, yOut, 700, available, TRUE);
-        
-        MoveWindow(hBtnSave, 810, yOut + available + 10, 150, btnH, TRUE);
+        ShowControl(hBtnSave, TRUE);
+        MoveWindow(hBtnSave, 810, btnY, 150, btnH, TRUE);
+        MoveWindow(hBtnCopy, 650, btnY, 150, btnH, TRUE);
     } else {
-        // Full height, no save button
-        MoveWindow(hEditOutput, 260, yOut, 700, hOutBase - 20, TRUE);
+        // Text mode, just Copy button at the end
+        MoveWindow(hBtnCopy, 810, btnY, 150, btnH, TRUE);
     }
     
     InvalidateRect(hMainWnd, NULL, TRUE);
@@ -531,7 +562,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             hBtnClear = CreateWindow("BUTTON", "Clear", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 660, 310, 150, 45, hwnd, (HMENU)ID_BTN_CLEAR, NULL, NULL);
 
             // Output
-            hLblOutputTitle = CreateWindow("STATIC", "Process Result:", WS_CHILD | WS_VISIBLE, 260, 370, 200, 20, hwnd, NULL, NULL, NULL);
+            hLblOutputTitle = CreateWindow("STATIC", "Output Text", WS_CHILD | WS_VISIBLE, 260, 370, 200, 20, hwnd, NULL, NULL, NULL);
             SetWindowFont(hLblOutputTitle, hFontLabel, TRUE);
             
             hEditOutput = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 
@@ -539,6 +570,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             SetWindowFont(hEditOutput, hFontMono, TRUE);
 
             hBtnSave = CreateWindow("BUTTON", "Save Result", WS_CHILD | BS_OWNERDRAW, 810, 600, 150, 35, hwnd, (HMENU)ID_BTN_SAVE, NULL, NULL);
+            hBtnCopy = CreateWindow("BUTTON", "Copy Result", WS_CHILD | BS_OWNERDRAW, 650, 600, 150, 35, hwnd, (HMENU)ID_BTN_COPY, NULL, NULL);
 
             // File Layout
             hGrpFile = CreateWindow("BUTTON", "File Selection", WS_CHILD | BS_GROUPBOX, 260, 10, 700, 80, hwnd, (HMENU)ID_GRP_FILE, NULL, NULL);
@@ -588,6 +620,9 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             else if(id == ID_BTN_SAVE) {
                 bg = APP_COLOR_BTN_SUCCESS; txt = APP_COLOR_BTN_TEXT;
             }
+            else if(id == ID_BTN_COPY) {
+                bg = RGB(100, 100, 100); txt = RGB(255, 255, 255);
+            }
 
             HBRUSH hBr = CreateSolidBrush(bg);
             FillRect(hdc, &rect, hBr);
@@ -620,6 +655,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             
             if(id == ID_BTN_CLEAR) ClearAllInputs();
             if(id == ID_BTN_SAVE) SaveOutputContent();
+            if(id == ID_BTN_COPY) CopyToClipboard();
             
             if(id == ID_BTN_BROWSE) {
                 OPENFILENAME ofn;
