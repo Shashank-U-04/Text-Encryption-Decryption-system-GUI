@@ -298,7 +298,7 @@ void UpdateLayout() {
         MoveWindow(hEditKey1, 280, 260, 150, 28, TRUE);
     }
     else if (currentMode == MODE_VIGENERE) {
-        SetWindowText(hMainWnd, "Text Encryption - Vigenère Cipher");
+        SetWindowText(hMainWnd, "Text Encryption - Vigenere Cipher");
         SetWindowText(hGrpSettings, "  Key Configuration  ");
         SetWindowText(hLblKey1, "Secret Keyword:");
         
@@ -312,8 +312,8 @@ void UpdateLayout() {
         SetWindowText(hGrpSettings, "  Conversion Configuration  ");
         SetWindowText(hLblInputTitle, "Cipher Text Source");
         
-        SetWindowText(hBtnAction1, "Caesar -> Vigenère");
-        SetWindowText(hBtnAction2, "Vigenère -> Caesar");
+        SetWindowText(hBtnAction1, "Caesar -> Vigenere");
+        SetWindowText(hBtnAction2, "Vigenere -> Caesar");
         
         ShowControl(hLblKey1, TRUE);
         ShowControl(hEditKey1, TRUE);
@@ -422,7 +422,7 @@ void ProcessText(int actionId) {
     }
     
     if (currentMode == MODE_VIGENERE && strlen(key1) == 0) {
-        MessageBox(hMainWnd, "Please enter a keyword for the Vigenère Cipher.", "Missing Key", MB_ICONERROR);
+        MessageBox(hMainWnd, "Please enter a keyword for the Vigenere Cipher.", "Missing Key", MB_ICONERROR);
         return;
     }
     
@@ -523,7 +523,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
 
             // Sidebar
             for(int i=0; i<4; i++) {
-                char* labels[] = {"Caesar Cipher", "Vigenère Cipher", "Cipher Conversions", "File Operations"};
+                char* labels[] = {"Caesar Cipher", "Vigenere Cipher", "Cipher Conversions", "File Operations"};
                 hSideBtn[i] = CreateWindow("BUTTON", labels[i], WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, 
                     0, 100 + (i*60), 240, 60, hwnd, (HMENU)(ID_BTN_SIDE_CAESAR + i), NULL, NULL);
             }
@@ -586,7 +586,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             
             hRadioCaesar = CreateWindow("BUTTON", "Caesar Cipher", WS_CHILD | BS_AUTORADIOBUTTON | WS_GROUP, 280, 125, 140, 25, hwnd, (HMENU)ID_RADIO_CAESAR, NULL, NULL);
             SetWindowFont(hRadioCaesar, hFontLabel, TRUE);
-            hRadioVigenere = CreateWindow("BUTTON", "Vigenère Cipher", WS_CHILD | BS_AUTORADIOBUTTON, 450, 125, 150, 25, hwnd, (HMENU)ID_RADIO_VIGENERE, NULL, NULL);
+            hRadioVigenere = CreateWindow("BUTTON", "Vigenere Cipher", WS_CHILD | BS_AUTORADIOBUTTON, 450, 125, 150, 25, hwnd, (HMENU)ID_RADIO_VIGENERE, NULL, NULL);
             SetWindowFont(hRadioVigenere, hFontLabel, TRUE);
             
             SendMessage(hRadioCaesar, BM_SETCHECK, BST_CHECKED, 0);
