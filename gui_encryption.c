@@ -288,7 +288,7 @@ void UpdateLayout() {
     MoveWindow(hLblKey1, 280, 240, 150, 20, TRUE);
     
     if (currentMode == MODE_CAESAR) {
-        SetWindowText(hMainWnd, "Text Encryption - Caesar Cipher");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System - Caesar Cipher");
         SetWindowText(hGrpSettings, "  Shift Configuration  ");
         SetWindowText(hLblKey1, "Shift Amount (1-25):");
         
@@ -298,7 +298,7 @@ void UpdateLayout() {
         MoveWindow(hEditKey1, 280, 260, 150, 28, TRUE);
     }
     else if (currentMode == MODE_VIGENERE) {
-        SetWindowText(hMainWnd, "Text Encryption - Vigenere Cipher");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System - Vigenere Cipher");
         SetWindowText(hGrpSettings, "  Key Configuration  ");
         SetWindowText(hLblKey1, "Secret Keyword:");
         
@@ -308,7 +308,7 @@ void UpdateLayout() {
         MoveWindow(hEditKey1, 280, 260, 250, 28, TRUE);
     }
     else if (currentMode == MODE_CONVERSION) {
-        SetWindowText(hMainWnd, "Text Encryption - Cipher Conversions");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System - Cipher Conversions");
         SetWindowText(hGrpSettings, "  Conversion Configuration  ");
         SetWindowText(hLblInputTitle, "Cipher Text Source");
         
@@ -329,7 +329,7 @@ void UpdateLayout() {
         MoveWindow(hEditKey2, 480, 260, 240, 28, TRUE);
     }
     else if (currentMode == MODE_FILE) {
-        SetWindowText(hMainWnd, "Text Encryption - File Utility");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System - File Utility");
         
         ShowControl(hGrpMain, FALSE);
         ShowControl(hEditInput, FALSE);
@@ -717,7 +717,7 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
     int x = (GetSystemMetrics(SM_CXSCREEN)-w)/2;
     int y = (GetSystemMetrics(SM_CYSCREEN)-h)/2;
 
-    HWND hwnd = CreateWindow("CryptAppV6", "Text Encryption Decryption System", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 
+    HWND hwnd = CreateWindow("CryptAppV6", "Text Encryption & Decryption System", WS_OVERLAPPEDWINDOW | WS_VISIBLE, 
                              x, y, w, h, NULL, NULL, hInst, NULL);
     
     MSG msg;
