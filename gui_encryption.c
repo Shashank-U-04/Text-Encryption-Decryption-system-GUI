@@ -1,24 +1,51 @@
+#define _WIN32_WINNT 0x0600
+#define _WIN32_IE 0x0600
 #define _CRT_SECURE_NO_WARNINGS
+#ifndef EM_SETCUEBANNER
+#define EM_SETCUEBANNER 0x1501
+#endif
 #include <windows.h>
+#include <commctrl.h>
 #include <commdlg.h>
 #include <stdio.h>
+#pragma comment(lib, "comctl32.lib")
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
 // ==================== VISUAL STYLE CONSTANTS ====================
-#define APP_COLOR_SIDEBAR       RGB(40, 44, 52)
-#define APP_COLOR_SIDEBAR_TEXT  RGB(220, 220, 220)
-#define APP_COLOR_SIDEBAR_SEL   RGB(0, 122, 204)
+// Modern "Fluent-style" Palette
+#define APP_COLOR_SIDEBAR       RGB(32, 32, 32)        // Dark Slate
+#define APP_COLOR_SIDEBAR_TEXT  RGB(240, 240, 240)     // White/Light Grey
+#define APP_COLOR_SIDEBAR_SEL   RGB(0, 120, 212)       // Windows Blue
 
-#define APP_COLOR_BACKGROUND    RGB(240, 240, 245)
-#define APP_COLOR_PANEL         RGB(255, 255, 255)
+#define APP_COLOR_BACKGROUND    RGB(243, 243, 243)     // Light Grey Background
+#define APP_COLOR_PANEL         RGB(255, 255, 255)     // Pure White Panels
 
-#define APP_COLOR_BTN_PRIMARY   RGB(0, 110, 200)
-#define APP_COLOR_BTN_HOVER     RGB(30, 140, 230)
-#define APP_COLOR_BTN_DANGER    RGB(200, 50, 50)
-#define APP_COLOR_BTN_SUCCESS   RGB(40, 167, 69) 
+// Button Colors (Normal)
+#define APP_COLOR_BTN_PRIMARY   RGB(0, 120, 212)       // Blue
+#define APP_COLOR_BTN_DANGER    RGB(232, 17, 35)       // Red
+#define APP_COLOR_BTN_SUCCESS   RGB(16, 124, 16)       // Green
+#define APP_COLOR_BTN_NEUTRAL   RGB(255, 255, 255)     // White (for Copy)
+#define APP_COLOR_BTN_SIDEBAR   RGB(32, 32, 32)        // Transparent-ish
+
+// Button Colors (Hover)
+#define APP_COLOR_BTN_PRI_HOVER RGB(25, 138, 227)
+#define APP_COLOR_BTN_DAN_HOVER RGB(245, 50, 60)
+#define APP_COLOR_BTN_SUC_HOVER RGB(30, 140, 30)
+#define APP_COLOR_BTN_NEU_HOVER RGB(230, 230, 230)
+#define APP_COLOR_SIDE_HOVER    RGB(50, 50, 50)
+
+// Button Colors (Pressed)
+#define APP_COLOR_BTN_PRI_PRESS RGB(0, 90, 158)
+#define APP_COLOR_BTN_DAN_PRESS RGB(180, 10, 20)
+#define APP_COLOR_BTN_SUC_PRESS RGB(10, 90, 10)
+
 #define APP_COLOR_BTN_TEXT      RGB(255, 255, 255)
+#define APP_COLOR_BTN_TEXT_DARK RGB(0, 0, 0)
+
+#define APP_COLOR_FOCUS_BORDER  RGB(0, 120, 212)
+#define APP_COLOR_INPUT_FOCUS   RGB(245, 250, 255)     // Subtle Blue Tint
 
 // ==================== CONTROL IDs ====================
 #define ID_BTN_SIDE_CAESAR   101
@@ -53,15 +80,20 @@ HWND hGrpMain, hGrpSettings, hGrpFile, hGrpAlgo;
 HWND hLblInputTitle, hEditInput;
 HWND hLblOutputTitle, hEditOutput;
 HWND hLblKey1, hEditKey1, hLblKey2, hEditKey2;
-// hLblHelp Removed for clean UI
+HWND hLblHelp;
 HWND hLblFileMsg, hEditFilePath, hBtnBrowse;
 HWND hRadioCaesar, hRadioVigenere;
 HWND hBtnAction1, hBtnAction2, hBtnClear, hBtnSave, hBtnCopy;
 HWND hSideBtn[4];
 
 // Fonts & Brushes
-HFONT hFontHeader, hFontLabel, hFontInput, hFontMono;
-HBRUSH hBrushSidebar, hBrushBg, hBrushPanel;
+HFONT hFontTitle, hFontLabel, hFontButton, hFontMono, hFontSmall;
+HBRUSH hBrushSidebar, hBrushBg, hBrushPanel, hBrushFocus;
+HPEN hPenSeparator;
+
+WNDPROC OldBtnProc = NULL;
+int btnHoverState[1000] = {0}; // Simple map for hover state (ControlID -> Bool)
+
 
 enum AppMode { MODE_CAESAR, MODE_VIGENERE, MODE_CONVERSION, MODE_FILE };
 enum AppMode currentMode = MODE_CAESAR;
@@ -70,6 +102,46 @@ enum AppMode currentMode = MODE_CAESAR;
 void SetWindowFont(HWND hwnd, HFONT font, BOOL redraw) {
     SendMessage(hwnd, WM_SETFONT, (WPARAM)font, MAKELPARAM(redraw, 0));
 }
+
+// Subclass Procedure for Buttons to handle Hover
+LRESULT CALLBACK ButtonProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    int id = GetDlgCtrlID(hwnd);
+    
+    switch(msg) {
+        case WM_MOUSEMOVE: {
+            if(!btnHoverState[id]) {
+                btnHoverState[id] = 1;
+                
+                TRACKMOUSEEVENT tme;
+                tme.cbSize = sizeof(TRACKMOUSEEVENT);
+                tme.dwFlags = TME_LEAVE;
+                tme.hwndTrack = hwnd;
+                TrackMouseEvent(&tme);
+                
+                InvalidateRect(hwnd, NULL, TRUE); // Trigger redraw for hover color
+            }
+            break;
+        }
+        case WM_MOUSELEAVE: {
+            btnHoverState[id] = 0;
+            InvalidateRect(hwnd, NULL, TRUE); // Trigger redraw for normal color
+            break;
+        }
+    }
+    return CallWindowProc(OldBtnProc, hwnd, msg, wParam, lParam);
+}
+
+void SubclassButton(HWND hBtn) {
+    if(!OldBtnProc) {
+        OldBtnProc = (WNDPROC)GetWindowLongPtr(hBtn, GWLP_WNDPROC);
+    }
+    SetWindowLongPtr(hBtn, GWLP_WNDPROC, (LONG_PTR)ButtonProc);
+}
+
+void SetPlaceholder(HWND hEdit, const wchar_t* text) {
+    SendMessageW(hEdit, EM_SETCUEBANNER, TRUE, (LPARAM)text);
+}
+
 
 // ==================== LOGIC HELPERS ====================
 
@@ -274,62 +346,118 @@ void UpdateLayout() {
     ShowControl(hBtnSave, FALSE);
     ShowControl(hBtnCopy, FALSE);
     
+    // Geometry Constants
+    int SIDEBAR_W = 300;
+    int MARGIN_X = 30;
+
+    int CONTENT_X = SIDEBAR_W + MARGIN_X;
+    int CONTENT_W = 800; 
+    
     // Show Main Text Controls (Default)
     ShowControl(hGrpMain, TRUE);
     ShowControl(hEditInput, TRUE);
-    ShowControl(hLblInputTitle, TRUE);
+    ShowControl(hLblInputTitle, FALSE); // Hide redundant static label, use GroupBox title
     
     // Defaults
     SetWindowText(hBtnAction1, "Encrypt");
     SetWindowText(hBtnAction2, "Decrypt");
-    SetWindowText(hLblInputTitle, "Input Text");
+    ShowControl(hBtnAction2, TRUE); // Ensure visible by default (hidden in Conversion)
+    SetWindowText(hGrpMain, "Message to Convert"); // Visible in all text sections
     
+    // Group Box Positions
+    MoveWindow(hGrpMain, CONTENT_X, 10, CONTENT_W, 200, TRUE);
+    // Move hEditInput to accommodate GroupBox title
+    MoveWindow(hEditInput, CONTENT_X + 20, 45, CONTENT_W - 40, 150, TRUE); 
+
+    // Settings Group
+    int SETTINGS_Y = 220;
+    MoveWindow(hGrpSettings, CONTENT_X, SETTINGS_Y, CONTENT_W, 90, TRUE);
+
     // Reset Key1 Label Width for default usage
-    MoveWindow(hLblKey1, 280, 240, 150, 20, TRUE);
+    MoveWindow(hLblKey1, CONTENT_X + 20, SETTINGS_Y + 25, 150, 30, TRUE);
+    MoveWindow(hEditKey1, CONTENT_X + 20, SETTINGS_Y + 55, 200, 32, TRUE); // Taller input
     
     if (currentMode == MODE_CAESAR) {
-        SetWindowText(hMainWnd, "Text Encryption & Decryption System - Caesar Cipher");
-        SetWindowText(hGrpSettings, "  Shift Configuration  ");
-        SetWindowText(hLblKey1, "Shift Amount (1-25):");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System");
+        SetWindowText(hGrpSettings, "  Configuration  ");
+        SetWindowText(hLblKey1, "Shift Amount (0-25)");
         
         ShowControl(hLblKey1, TRUE);
         ShowControl(hEditKey1, TRUE);
-        MoveWindow(hLblKey1, 280, 240, 200, 20, TRUE);
-        MoveWindow(hEditKey1, 280, 260, 150, 28, TRUE);
+
+        // Positioned above
+        
+        ShowControl(hLblHelp, TRUE);
+        SetWindowText(hLblHelp, "Rule: Enter a number between 0 and 25.");
+        MoveWindow(hLblHelp, CONTENT_X + CONTENT_W - 400, SETTINGS_Y + 95, 400, 20, TRUE);
     }
     else if (currentMode == MODE_VIGENERE) {
-        SetWindowText(hMainWnd, "Text Encryption & Decryption System - Vigenere Cipher");
-        SetWindowText(hGrpSettings, "  Key Configuration  ");
-        SetWindowText(hLblKey1, "Secret Keyword:");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System");
+        SetWindowText(hGrpSettings, "  Configuration  ");
+        SetWindowText(hLblKey1, "Secret Keyword");
         
         ShowControl(hLblKey1, TRUE);
         ShowControl(hEditKey1, TRUE);
-        MoveWindow(hLblKey1, 280, 240, 200, 20, TRUE);
-        MoveWindow(hEditKey1, 280, 260, 250, 28, TRUE);
+        MoveWindow(hEditKey1, CONTENT_X + 20, SETTINGS_Y + 55, 300, 32, TRUE);
+        
+        ShowControl(hLblHelp, TRUE);
+        SetWindowText(hLblHelp, "Rule: Key must contain only English letters (A-Z).");
+        MoveWindow(hLblHelp, CONTENT_X + CONTENT_W - 400, SETTINGS_Y + 95, 400, 20, TRUE);
     }
     else if (currentMode == MODE_CONVERSION) {
-        SetWindowText(hMainWnd, "Text Encryption & Decryption System - Cipher Conversions");
-        SetWindowText(hGrpSettings, "  Conversion Configuration  ");
-        SetWindowText(hLblInputTitle, "Cipher Text Source");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System");
+        SetWindowText(hGrpSettings, "  Configuration  ");
+        SetWindowText(hLblInputTitle, "Message to Convert"); 
         
-        SetWindowText(hBtnAction1, "Caesar -> Vigenere");
-        SetWindowText(hBtnAction2, "Vigenere -> Caesar");
+        // Split Logic: Use Radios
+        ShowControl(hRadioCaesar, TRUE);
+        ShowControl(hRadioVigenere, TRUE);
+        SetWindowText(hRadioCaesar, "Caesar -> Vigenere");
+        SetWindowText(hRadioVigenere, "Vigenere -> Caesar");
+        MoveWindow(hRadioCaesar, CONTENT_X + 20, SETTINGS_Y + 25, 200, 25, TRUE);
+        MoveWindow(hRadioVigenere, CONTENT_X + 240, SETTINGS_Y + 25, 200, 25, TRUE);
         
+        // Single Action Button
+        SetWindowText(hBtnAction1, "Convert");
+        ShowControl(hBtnAction2, FALSE);
+
+        // Check Radio State (Default to C->V if none)
+        int isCtoV = (SendMessage(hRadioCaesar, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        int isVtoC = (SendMessage(hRadioVigenere, BM_GETCHECK, 0, 0) == BST_CHECKED);
+        if(!isCtoV && !isVtoC) {
+            SendMessage(hRadioCaesar, BM_SETCHECK, BST_CHECKED, 0);
+            isCtoV = 1;
+        }
+
         ShowControl(hLblKey1, TRUE);
         ShowControl(hEditKey1, TRUE);
-        SetWindowText(hLblKey1, "Caesar Shift:");
-        MoveWindow(hLblKey1, 280, 240, 150, 20, TRUE);
-        MoveWindow(hEditKey1, 280, 260, 150, 28, TRUE);
-        
         ShowControl(hLblKey2, TRUE);
         ShowControl(hEditKey2, TRUE);
-        SetWindowText(hLblKey2, "Vigenere Key:"); 
         
-        MoveWindow(hLblKey2, 480, 240, 240, 20, TRUE);
-        MoveWindow(hEditKey2, 480, 260, 240, 28, TRUE);
+        if(isCtoV) {
+             SetWindowText(hLblKey1, "Current Caesar Shift");
+             SetWindowText(hLblKey2, "Target Vigenere Key");
+        } else {
+             SetWindowText(hLblKey1, "Current Vigenere Key");
+             SetWindowText(hLblKey2, "Target Caesar Shift");
+        }
+        
+        // Position Inputs Lower
+        MoveWindow(hLblKey1, CONTENT_X + 20, SETTINGS_Y + 60, 200, 30, TRUE);
+        MoveWindow(hEditKey1, CONTENT_X + 20, SETTINGS_Y + 85, 250, 32, TRUE);
+        
+        MoveWindow(hLblKey2, CONTENT_X + 280, SETTINGS_Y + 60, 200, 30, TRUE);
+        MoveWindow(hEditKey2, CONTENT_X + 280, SETTINGS_Y + 85, 250, 32, TRUE);
+
+        ShowControl(hLblHelp, TRUE);
+        SetWindowText(hLblHelp, "Rules: Caesar Shift (0-25), Vigenere Key (Letters Only).");
+        MoveWindow(hLblHelp, CONTENT_X + CONTENT_W - 500, SETTINGS_Y + 125, 500, 20, TRUE);
+        
+        // Increase Settings Height
+        MoveWindow(hGrpSettings, CONTENT_X, SETTINGS_Y, CONTENT_W, 160, TRUE);
     }
     else if (currentMode == MODE_FILE) {
-        SetWindowText(hMainWnd, "Text Encryption & Decryption System - File Utility");
+        SetWindowText(hMainWnd, "Text Encryption & Decryption System");
         
         ShowControl(hGrpMain, FALSE);
         ShowControl(hEditInput, FALSE);
@@ -337,88 +465,117 @@ void UpdateLayout() {
         
         // FILE LAYOUT
         ShowControl(hGrpFile, TRUE);
-        MoveWindow(hGrpFile, 260, 10, 700, 80, TRUE);
-        SetWindowText(hGrpFile, "  File Selection  ");
+        MoveWindow(hGrpFile, CONTENT_X, 10, CONTENT_W, 90, TRUE);
+        SetWindowText(hGrpFile, "  File to Convert  "); // Visible title
+
 
         ShowControl(hEditFilePath, TRUE);
-        MoveWindow(hEditFilePath, 280, 40, 500, 28, TRUE);
+        MoveWindow(hEditFilePath, CONTENT_X + 20, 40, CONTENT_W - 140, 28, TRUE);
         ShowControl(hBtnBrowse, TRUE);
-        MoveWindow(hBtnBrowse, 800, 39, 120, 30, TRUE);
+        MoveWindow(hBtnBrowse, CONTENT_X + CONTENT_W - 110, 38, 100, 32, TRUE);
         
         ShowControl(hGrpAlgo, TRUE);
-        MoveWindow(hGrpAlgo, 260, 100, 700, 70, TRUE);
+        MoveWindow(hGrpAlgo, CONTENT_X, 110, CONTENT_W, 80, TRUE);
         
         ShowControl(hRadioCaesar, TRUE);
-        MoveWindow(hRadioCaesar, 280, 125, 140, 25, TRUE);
+        SetWindowText(hRadioCaesar, "Caesar Cipher");
+        MoveWindow(hRadioCaesar, CONTENT_X + 20, 140, 140, 25, TRUE);
+        
         ShowControl(hRadioVigenere, TRUE);
-        MoveWindow(hRadioVigenere, 450, 125, 150, 25, TRUE);
+        SetWindowText(hRadioVigenere, "Vigenere Cipher");
+        MoveWindow(hRadioVigenere, CONTENT_X + 200, 140, 150, 25, TRUE);
         
         // Settings Group
-        SetWindowText(hGrpSettings, "  Configuration  ");
-        MoveWindow(hGrpSettings, 260, 180, 700, 80, TRUE);
+        // Reuse SETTINGS_Y var but shifted for file mode
+        SETTINGS_Y = 200;
+        MoveWindow(hGrpSettings, CONTENT_X, SETTINGS_Y, CONTENT_W, 90, TRUE);
+        SetWindowText(hGrpSettings, "  Encryption Settings  ");
         
         ShowControl(hLblKey1, TRUE);
         ShowControl(hEditKey1, TRUE);
-        SetWindowText(hLblKey1, "Shift / Key:");
-        MoveWindow(hLblKey1, 280, 210, 200, 20, TRUE);
-        MoveWindow(hEditKey1, 280, 230, 250, 28, TRUE);
+        SetWindowText(hLblKey1, "Shift / Key");
+        MoveWindow(hLblKey1, CONTENT_X + 20, SETTINGS_Y + 25, 200, 30, TRUE);
+        MoveWindow(hEditKey1, CONTENT_X + 20, SETTINGS_Y + 55, 300, 32, TRUE);
+
+        // Help Text inside Settings Box
+        ShowControl(hLblHelp, TRUE);
+        SetWindowText(hLblHelp, "Rules: Caesar (0-25), Vigenere (Letters).");
+        MoveWindow(hLblHelp, CONTENT_X + CONTENT_W - 400, SETTINGS_Y + 95, 400, 20, TRUE);
+        
+        // Increase Settings Height to fit help
+        MoveWindow(hGrpSettings, CONTENT_X, SETTINGS_Y, CONTENT_W, 130, TRUE);
         
         SetWindowText(hBtnAction1, "Encrypt File");
         SetWindowText(hBtnAction2, "Decrypt File");
+        ShowControl(hBtnAction2, TRUE); 
         
         ShowControl(hBtnSave, TRUE);
     }
     
-    if(currentMode != MODE_FILE) {
-        MoveWindow(hGrpSettings, 260, 215, 700, 80, TRUE);
-    }
-    
     // Actions Row
-    int yAct = 310;
-    if(currentMode == MODE_FILE) yAct = 280;
+    int ACTIONS_Y = (currentMode == MODE_FILE) ? 360 : (currentMode == MODE_CONVERSION ? 400 : 330);
     
-    MoveWindow(hBtnAction1, 260, yAct, 180, 45, TRUE);
-    MoveWindow(hBtnAction2, 460, yAct, 180, 45, TRUE);
-    MoveWindow(hBtnClear,   660, yAct, 150, 45, TRUE);
+    int BTN_W = 160;
+    int BTN_H = 45; // Taller Buttons
+    int GAP = 25;
+    
+    MoveWindow(hBtnAction1, CONTENT_X, ACTIONS_Y, BTN_W, BTN_H, TRUE);
+    MoveWindow(hBtnAction2, CONTENT_X + BTN_W + GAP, ACTIONS_Y, BTN_W, BTN_H, TRUE);
+    MoveWindow(hBtnClear,   CONTENT_X + (BTN_W + GAP)*2, ACTIONS_Y, 120, BTN_H, TRUE);
 
     // Output Box
-    int yLabel = yAct + 60;
-    int yOut = yLabel + 20;
+    int OUT_LABEL_Y = ACTIONS_Y + BTN_H + 20;
+    int OUT_BOX_Y = OUT_LABEL_Y + 25;
     
     ShowControl(hLblOutputTitle, TRUE);
-    MoveWindow(hLblOutputTitle, 260, yLabel, 200, 20, TRUE);
+    MoveWindow(hLblOutputTitle, CONTENT_X, OUT_LABEL_Y, 200, 20, TRUE);
 
-    int btnH = 35; 
-    int padding = 10;
-    int bottomSpace = btnH + padding + 20; // Space for buttons at bottom
-    int availableHeight = 620 - yOut - bottomSpace;
+    int bottomSpace = 60; // Space for buttons at bottom
+    int availableHeight = 750 - OUT_BOX_Y - bottomSpace;
 
-    MoveWindow(hEditOutput, 260, yOut, 700, availableHeight, TRUE);
+    MoveWindow(hEditOutput, CONTENT_X, OUT_BOX_Y, CONTENT_W, availableHeight, TRUE);
     
-    int btnY = yOut + availableHeight + 10;
+    int BTN_ROW_Y = OUT_BOX_Y + availableHeight + 15;
     
     ShowControl(hBtnCopy, TRUE);
     
     if(currentMode == MODE_FILE) {
         ShowControl(hBtnSave, TRUE);
-        MoveWindow(hBtnSave, 810, btnY, 150, btnH, TRUE);
-        MoveWindow(hBtnCopy, 650, btnY, 150, btnH, TRUE);
+        MoveWindow(hBtnSave, CONTENT_X + CONTENT_W - 140, BTN_ROW_Y, 140, 36, TRUE);
+        MoveWindow(hBtnCopy, CONTENT_X + CONTENT_W - 300, BTN_ROW_Y, 140, 36, TRUE);
     } else {
-        // Text mode, just Copy button at the end
-        MoveWindow(hBtnCopy, 810, btnY, 150, btnH, TRUE);
+        MoveWindow(hBtnCopy, CONTENT_X + CONTENT_W - 140, BTN_ROW_Y, 140, 36, TRUE);
     }
     
     InvalidateRect(hMainWnd, NULL, TRUE);
 }
+
 
 void ProcessText(int actionId) {
     char key1[100], key2[100];
     GetWindowText(hEditKey1, key1, 100);
     GetWindowText(hEditKey2, key2, 100);
     
-    if ((currentMode == MODE_CAESAR || currentMode == MODE_CONVERSION) && !IsNumeric(key1)) {
+    // Validation Logic
+    int isCtoV = 1;
+    if(currentMode == MODE_CONVERSION) {
+        isCtoV = (SendMessage(hRadioCaesar, BM_GETCHECK, 0, 0) == BST_CHECKED);
+    }
+
+    if (currentMode == MODE_CAESAR && !IsNumeric(key1)) {
         MessageBox(hMainWnd, "Please enter a valid numeric Shift (0-25).", "Invalid Input", MB_ICONERROR);
         return;
+    }
+    
+    if (currentMode == MODE_CONVERSION) {
+         if (isCtoV && !IsNumeric(key1)) {
+             MessageBox(hMainWnd, "Please enter a valid numeric Caesar Shift (0-25).", "Invalid Input", MB_ICONERROR);
+             return;
+         }
+         if (!isCtoV && !IsNumeric(key2)) {
+             MessageBox(hMainWnd, "Please enter a valid numeric Target Shift (0-25).", "Invalid Input", MB_ICONERROR);
+             return;
+         }
     }
     
     if (currentMode == MODE_VIGENERE && strlen(key1) == 0) {
@@ -446,12 +603,20 @@ void ProcessText(int actionId) {
             if(!output) MessageBox(hMainWnd, "Key must contain only letters.", "Invalid Key", MB_ICONERROR);
             break;
         case MODE_CONVERSION:
-            if(strlen(key2) == 0) {
-                MessageBox(hMainWnd, "Please enter the Vigenere Key.", "Missing Key", MB_ICONERROR);
-            } else {
-                if(actionId == ID_BTN_ACTION1) output = caesarToVigenere(input, shift, key2);
-                else output = vigenereToCaesar(input, key2, shift);
-                if(!output) MessageBox(hMainWnd, "Conversion failed. Verify keys.", "Error", MB_ICONERROR);
+            {
+               int isCtoV = (SendMessage(hRadioCaesar, BM_GETCHECK, 0, 0) == BST_CHECKED);
+               if(isCtoV) {
+                   if(strlen(key2) == 0) MessageBox(hMainWnd, "Please enter the Target Vigenere Key.", "Missing Key", MB_ICONERROR);
+                   else output = caesarToVigenere(input, shift, key2);
+               } else {
+
+                   // Vigenere -> Caesar
+                   if(strlen(key1) == 0) MessageBox(hMainWnd, "Please enter the Current Vigenere Key.", "Missing Key", MB_ICONERROR);
+                   else {
+                       int targetShift = atoi(key2);
+                       output = vigenereToCaesar(input, key1, targetShift); 
+                   }
+               }
             }
             break;
     }
@@ -512,81 +677,109 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CREATE: {
             hMainWnd = hwnd;
             
-            hFontHeader = CreateFont(20, 0, 0, 0, FW_BOLD, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Verdana");
-            hFontInput = CreateFont(16, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Verdana");
-            hFontLabel = CreateFont(14, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Verdana");
-            hFontMono = CreateFont(16, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH, "Consolas");
+            // 1. Fonts (Segoe UI) - Increased Sizes
+            hFontTitle = CreateFont(42, 0, 0, 0, FW_BOLD, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Segoe UI");
+            hFontLabel = CreateFont(24, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Segoe UI");
+            hFontButton = CreateFont(20, 0, 0, 0, FW_SEMIBOLD, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Segoe UI");
+            hFontMono = CreateFont(22, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, FIXED_PITCH, "Consolas");
+            hFontSmall = CreateFont(18, 0, 0, 0, FW_NORMAL, 0, 0, 0, ANSI_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, PROOF_QUALITY, DEFAULT_PITCH, "Segoe UI");
 
+            // 2. Brushes/Pens
             hBrushSidebar = CreateSolidBrush(APP_COLOR_SIDEBAR);
             hBrushBg = CreateSolidBrush(APP_COLOR_BACKGROUND);
             hBrushPanel = CreateSolidBrush(APP_COLOR_PANEL);
+            hBrushFocus = CreateSolidBrush(APP_COLOR_INPUT_FOCUS);
+            hPenSeparator = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
 
-            // Sidebar
+            // 3. Create Controls
+            
+            // Sidebar Buttons
             for(int i=0; i<4; i++) {
                 char* labels[] = {"Caesar Cipher", "Vigenere Cipher", "Cipher Conversions", "File Operations"};
                 hSideBtn[i] = CreateWindow("BUTTON", labels[i], WS_VISIBLE | WS_CHILD | BS_OWNERDRAW, 
-                    0, 100 + (i*60), 240, 60, hwnd, (HMENU)(ID_BTN_SIDE_CAESAR + i), NULL, NULL);
+                    0, 320 + (i*75), 300, 75, hwnd, (HMENU)(ID_BTN_SIDE_CAESAR + i), NULL, NULL); 
+                SubclassButton(hSideBtn[i]);
             }
 
-            // === ELEMENTS ===
-            hGrpMain = CreateWindow("BUTTON", "Input Text", WS_CHILD | BS_GROUPBOX | WS_VISIBLE, 260, 10, 700, 200, hwnd, (HMENU)ID_GRP_MAIN, NULL, NULL);
-            SetWindowFont(hGrpMain, hFontHeader, TRUE);
+            // Groups (No Visible Title, just border container)
+            hGrpMain = CreateWindow("BUTTON", "Input Text", WS_CHILD | BS_GROUPBOX | WS_VISIBLE, 0, 0, 0, 0, hwnd, (HMENU)ID_GRP_MAIN, NULL, NULL);
+            SetWindowFont(hGrpMain, hFontLabel, TRUE);
             
-            hLblInputTitle = CreateWindow("STATIC", "Input Text", WS_CHILD | WS_VISIBLE, 280, 35, 200, 20, hwnd, NULL, NULL, NULL);
+            // hLblInputTitle removed here (redundant), but handle is kept for logic compatibility if used elsewhere.
+            // Actually, for GroupBox, the title is "Input Text". The separate static label "Input Text" is redundant.
+            // But we can't remove the ID hLblInputTitle easily without breaking logic if referenced?
+            // The constraint says "Do NOT remove or rename controls or IDs".
+            // So we will just hide it or set text to empty if redundant, OR just let it be if user asked to "Avoid duplicate labels".
+            // Logic references hLblInputTitle in UpdateLayout to Move/Show it.
+            // We'll update the text to be empty or something distinct if needed, but per request "remove inner 'Input Text' label".
+            // The cleanest way while keeping ID is to make the static control empty text or hidden?
+            // "Avoid duplicate labels (e.g., remove inner “Input Text” label if the GroupBox already has the same title)"
+            // I'll set the static text to "" (empty) inside UpdateLayout or just here, but UpdateLayout resets it.
+            // I will modify UpdateLayout to set it to empty string or distinct text.
+            
+            hLblInputTitle = CreateWindow("STATIC", "", WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
             SetWindowFont(hLblInputTitle, hFontLabel, TRUE);
             
-            hEditInput = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL, 
-                280, 55, 660, 140, hwnd, (HMENU)ID_EDIT_INPUT, NULL, NULL);
+            hEditInput = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_AUTOVSCROLL, 0, 0, 0, 0, hwnd, (HMENU)ID_EDIT_INPUT, NULL, NULL);
             SetWindowFont(hEditInput, hFontMono, TRUE);
+            SetPlaceholder(hEditInput, L"Enter text here...");
 
-            hGrpSettings = CreateWindow("BUTTON", "Settings", WS_CHILD | BS_GROUPBOX | WS_VISIBLE, 260, 215, 700, 80, hwnd, (HMENU)ID_GRP_SETTINGS, NULL, NULL);
-            SetWindowFont(hGrpSettings, hFontHeader, TRUE);
+            hGrpSettings = CreateWindow("BUTTON", "Settings", WS_CHILD | BS_GROUPBOX | WS_VISIBLE, 0, 0, 0, 0, hwnd, (HMENU)ID_GRP_SETTINGS, NULL, NULL);
+            SetWindowFont(hGrpSettings, hFontLabel, TRUE);
             
-            hLblKey1 = CreateWindow("STATIC", "Key:", WS_CHILD | WS_VISIBLE, 280, 240, 150, 20, hwnd, NULL, NULL, NULL);
+            hLblKey1 = CreateWindow("STATIC", "Key:", WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
             SetWindowFont(hLblKey1, hFontLabel, TRUE);
-            hEditKey1 = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER, 280, 260, 200, 28, hwnd, (HMENU)ID_EDIT_KEY1, NULL, NULL);
-            SetWindowFont(hEditKey1, hFontInput, TRUE);
-            
-            hLblKey2 = CreateWindow("STATIC", "Key 2:", WS_CHILD, 500, 240, 150, 20, hwnd, NULL, NULL, NULL);
-            SetWindowFont(hLblKey2, hFontLabel, TRUE);
-            hEditKey2 = CreateWindow("EDIT", "", WS_CHILD | WS_BORDER, 500, 260, 200, 28, hwnd, (HMENU)ID_EDIT_KEY2, NULL, NULL);
-            SetWindowFont(hEditKey2, hFontInput, TRUE);
-            
-            SetWindowFont(hEditKey2, hFontInput, TRUE);
+            hEditKey1 = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL, 0, 0, 0, 0, hwnd, (HMENU)ID_EDIT_KEY1, NULL, NULL);
+            SetWindowFont(hEditKey1, hFontMono, TRUE);
+            SetPlaceholder(hEditKey1, L"Enter Shift/Key");
 
-            // Removed hLblHelp creation
+            hLblKey2 = CreateWindow("STATIC", "Target Key:", WS_CHILD | WS_VISIBLE, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
+            SetWindowFont(hLblKey2, hFontLabel, TRUE);
+            hEditKey2 = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | ES_AUTOHSCROLL, 0, 0, 0, 0, hwnd, (HMENU)ID_EDIT_KEY2, NULL, NULL);
+            SetWindowFont(hEditKey2, hFontMono, TRUE);
+
+            hLblHelp = CreateWindow("STATIC", "", WS_CHILD | WS_VISIBLE | SS_RIGHT, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
+            SetWindowFont(hLblHelp, hFontSmall, TRUE);
+
+            
+            hLblKey2 = CreateWindow("STATIC", "Key 2:", WS_CHILD, 0, 0, 0, 0, hwnd, NULL, NULL, NULL);
+            SetWindowFont(hLblKey2, hFontLabel, TRUE);
+            hEditKey2 = CreateWindow("EDIT", "", WS_CHILD | WS_BORDER, 0, 0, 0, 0, hwnd, (HMENU)ID_EDIT_KEY2, NULL, NULL);
+            SetWindowFont(hEditKey2, hFontMono, TRUE);
             
             // Actions
-            hBtnAction1 = CreateWindow("BUTTON", "Encrypt", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 260, 310, 180, 45, hwnd, (HMENU)ID_BTN_ACTION1, NULL, NULL);
-            hBtnAction2 = CreateWindow("BUTTON", "Decrypt", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 460, 310, 180, 45, hwnd, (HMENU)ID_BTN_ACTION2, NULL, NULL);
-            hBtnClear = CreateWindow("BUTTON", "Clear", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 660, 310, 150, 45, hwnd, (HMENU)ID_BTN_CLEAR, NULL, NULL);
+            hBtnAction1 = CreateWindow("BUTTON", "Encrypt", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 0,0,0,0, hwnd, (HMENU)ID_BTN_ACTION1, NULL, NULL);
+            hBtnAction2 = CreateWindow("BUTTON", "Decrypt", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 0,0,0,0, hwnd, (HMENU)ID_BTN_ACTION2, NULL, NULL);
+            hBtnClear = CreateWindow("BUTTON", "Clear", WS_CHILD | WS_VISIBLE | BS_OWNERDRAW, 0,0,0,0, hwnd, (HMENU)ID_BTN_CLEAR, NULL, NULL);
+            SubclassButton(hBtnAction1); SubclassButton(hBtnAction2); SubclassButton(hBtnClear);
 
             // Output
-            hLblOutputTitle = CreateWindow("STATIC", "Output Text", WS_CHILD | WS_VISIBLE, 260, 370, 200, 20, hwnd, NULL, NULL, NULL);
+            hLblOutputTitle = CreateWindow("STATIC", "Output Text", WS_CHILD | WS_VISIBLE, 0,0,0,0, hwnd, NULL, NULL, NULL);
             SetWindowFont(hLblOutputTitle, hFontLabel, TRUE);
             
-            hEditOutput = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 
-                260, 390, 700, 200, hwnd, (HMENU)ID_EDIT_OUTPUT, NULL, NULL);
+            hEditOutput = CreateWindow("EDIT", "", WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_READONLY | ES_AUTOVSCROLL, 0,0,0,0, hwnd, (HMENU)ID_EDIT_OUTPUT, NULL, NULL);
             SetWindowFont(hEditOutput, hFontMono, TRUE);
 
-            hBtnSave = CreateWindow("BUTTON", "Save Result", WS_CHILD | BS_OWNERDRAW, 810, 600, 150, 35, hwnd, (HMENU)ID_BTN_SAVE, NULL, NULL);
-            hBtnCopy = CreateWindow("BUTTON", "Copy Result", WS_CHILD | BS_OWNERDRAW, 650, 600, 150, 35, hwnd, (HMENU)ID_BTN_COPY, NULL, NULL);
+            hBtnSave = CreateWindow("BUTTON", "Save Result", WS_CHILD | BS_OWNERDRAW, 0,0,0,0, hwnd, (HMENU)ID_BTN_SAVE, NULL, NULL);
+            hBtnCopy = CreateWindow("BUTTON", "Copy Result", WS_CHILD | BS_OWNERDRAW, 0,0,0,0, hwnd, (HMENU)ID_BTN_COPY, NULL, NULL);
+            SubclassButton(hBtnSave); SubclassButton(hBtnCopy);
 
             // File Layout
-            hGrpFile = CreateWindow("BUTTON", "File Selection", WS_CHILD | BS_GROUPBOX, 260, 10, 700, 80, hwnd, (HMENU)ID_GRP_FILE, NULL, NULL);
-            SetWindowFont(hGrpFile, hFontHeader, TRUE);
+            hGrpFile = CreateWindow("BUTTON", "File Selection", WS_CHILD | BS_GROUPBOX, 0,0,0,0, hwnd, (HMENU)ID_GRP_FILE, NULL, NULL);
+            SetWindowFont(hGrpFile, hFontLabel, TRUE);
             
-            hEditFilePath = CreateWindow("EDIT", "", WS_CHILD | WS_BORDER | ES_READONLY, 280, 40, 500, 28, hwnd, (HMENU)ID_EDIT_FILEPATH, NULL, NULL);
-            SetWindowFont(hEditFilePath, hFontInput, TRUE);
-            hBtnBrowse = CreateWindow("BUTTON", "Browse...", WS_CHILD | BS_PUSHBUTTON, 800, 39, 120, 30, hwnd, (HMENU)ID_BTN_BROWSE, NULL, NULL);
-            SetWindowFont(hBtnBrowse, hFontLabel, TRUE);
+            hEditFilePath = CreateWindow("EDIT", "", WS_CHILD | WS_BORDER | ES_READONLY, 0,0,0,0, hwnd, (HMENU)ID_EDIT_FILEPATH, NULL, NULL);
+            SetWindowFont(hEditFilePath, hFontSmall, TRUE);
             
-            hGrpAlgo = CreateWindow("BUTTON", "Algorithm", WS_CHILD | BS_GROUPBOX, 260, 100, 700, 70, hwnd, (HMENU)ID_GRP_ALGO, NULL, NULL);
-            SetWindowFont(hGrpAlgo, hFontHeader, TRUE);
+            hBtnBrowse = CreateWindow("BUTTON", "Browse", WS_CHILD | BS_PUSHBUTTON | BS_OWNERDRAW, 0,0,0,0, hwnd, (HMENU)ID_BTN_BROWSE, NULL, NULL);
+            SubclassButton(hBtnBrowse);
             
-            hRadioCaesar = CreateWindow("BUTTON", "Caesar Cipher", WS_CHILD | BS_AUTORADIOBUTTON | WS_GROUP, 280, 125, 140, 25, hwnd, (HMENU)ID_RADIO_CAESAR, NULL, NULL);
+            hGrpAlgo = CreateWindow("BUTTON", "Algorithm", WS_CHILD | BS_GROUPBOX, 0,0,0,0, hwnd, (HMENU)ID_GRP_ALGO, NULL, NULL);
+            SetWindowFont(hGrpAlgo, hFontLabel, TRUE);
+            
+            hRadioCaesar = CreateWindow("BUTTON", "Caesar Cipher", WS_CHILD | BS_AUTORADIOBUTTON | WS_GROUP, 0,0,0,0, hwnd, (HMENU)ID_RADIO_CAESAR, NULL, NULL);
             SetWindowFont(hRadioCaesar, hFontLabel, TRUE);
-            hRadioVigenere = CreateWindow("BUTTON", "Vigenere Cipher", WS_CHILD | BS_AUTORADIOBUTTON, 450, 125, 150, 25, hwnd, (HMENU)ID_RADIO_VIGENERE, NULL, NULL);
+            hRadioVigenere = CreateWindow("BUTTON", "Vigenere Cipher", WS_CHILD | BS_AUTORADIOBUTTON, 0,0,0,0, hwnd, (HMENU)ID_RADIO_VIGENERE, NULL, NULL);
             SetWindowFont(hRadioVigenere, hFontLabel, TRUE);
             
             SendMessage(hRadioCaesar, BM_SETCHECK, BST_CHECKED, 0);
@@ -602,35 +795,109 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
             int id = pDIS->CtlID;
             char text[32]; GetWindowText(pDIS->hwndItem, text, 32);
 
-            COLORREF bg = RGB(220,220,220); 
-            COLORREF txt = RGB(0,0,0);
+            COLORREF bg = APP_COLOR_BTN_PRI_HOVER; 
+            COLORREF txt = APP_COLOR_BTN_TEXT;
             
+            int hover = btnHoverState[id];
+            int pressed = (pDIS->itemState & ODS_SELECTED);
+
+            // Sidebar Buttons
             if(id >= ID_BTN_SIDE_CAESAR && id <= ID_BTN_SIDE_FILE) {
                 int idx = id - ID_BTN_SIDE_CAESAR;
-                bg = (idx == (int)currentMode) ? APP_COLOR_SIDEBAR_SEL : APP_COLOR_SIDEBAR;
-                txt = APP_COLOR_SIDEBAR_TEXT;
+                int active = (idx == (int)currentMode);
+                
+                if (active) bg = APP_COLOR_SIDEBAR_SEL;
+                else if (pressed) bg = RGB(60,60,60); // Darker
+                else if (hover) bg = APP_COLOR_SIDE_HOVER;
+                else bg = APP_COLOR_SIDEBAR; // Transparent/Match BG
+                
+                txt = active ? RGB(255,255,255) : APP_COLOR_SIDEBAR_TEXT;
+                
+                FillRect(hdc, &rect, hBrushSidebar); // Clear background first
+                
+                // Draw Indicator
+                if (active) {
+                    RECT rInd = {rect.left, rect.top + 10, rect.left + 4, rect.bottom - 10};
+                    HBRUSH hBrInd = CreateSolidBrush(RGB(0, 160, 255));
+                    FillRect(hdc, &rInd, hBrInd);
+                    DeleteObject(hBrInd);
+                }
+                
+                // Draw Rect (Whole button or rounded?) Sidebar usually flat.
+                HBRUSH hBr = CreateSolidBrush(bg);
+                FillRect(hdc, &rect, hBr);
+                DeleteObject(hBr);
+                
+                SetBkMode(hdc, TRANSPARENT);
+                SetTextColor(hdc, txt);
+                SelectObject(hdc, hFontLabel); // Larger font for sidebar
+                
+                // Padding for text
+                RECT rText = rect; rText.left += 20;
+                DrawText(hdc, text, -1, &rText, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
             }
+            // Action Buttons
             else if(id == ID_BTN_ACTION1 || id == ID_BTN_ACTION2) {
-                 bg = (pDIS->itemState & ODS_SELECTED) ? APP_COLOR_BTN_HOVER : APP_COLOR_BTN_PRIMARY;
+                 if (pressed) bg = APP_COLOR_BTN_PRI_PRESS;
+                 else if (hover) bg = APP_COLOR_BTN_PRI_HOVER;
+                 else bg = APP_COLOR_BTN_PRIMARY;
                  txt = APP_COLOR_BTN_TEXT;
+                 goto DrawRounded;
             }
             else if(id == ID_BTN_CLEAR) {
-                bg = APP_COLOR_BTN_DANGER; txt = APP_COLOR_BTN_TEXT;
+                if (pressed) bg = APP_COLOR_BTN_DAN_PRESS;
+                else if (hover) bg = APP_COLOR_BTN_DAN_HOVER;
+                else bg = APP_COLOR_BTN_DANGER;
+                txt = APP_COLOR_BTN_TEXT;
+                goto DrawRounded;
             }
             else if(id == ID_BTN_SAVE) {
-                bg = APP_COLOR_BTN_SUCCESS; txt = APP_COLOR_BTN_TEXT;
+                if (pressed) bg = APP_COLOR_BTN_SUC_PRESS;
+                else if (hover) bg = APP_COLOR_BTN_SUC_HOVER;
+                else bg = APP_COLOR_BTN_SUCCESS;
+                txt = APP_COLOR_BTN_TEXT;
+                goto DrawRounded;
             }
-            else if(id == ID_BTN_COPY) {
-                bg = RGB(100, 100, 100); txt = RGB(255, 255, 255);
+            else if(id == ID_BTN_COPY || id == ID_BTN_BROWSE) {
+                // Secondary / Neutral
+                if (pressed) bg = RGB(200, 200, 200);
+                else if (hover) bg = APP_COLOR_BTN_NEU_HOVER;
+                else bg = APP_COLOR_BTN_NEUTRAL;
+                txt = RGB(0,0,0);
+                goto DrawRounded;
             }
-
-            HBRUSH hBr = CreateSolidBrush(bg);
-            FillRect(hdc, &rect, hBr);
-            DeleteObject(hBr);
             
+            return TRUE;
+
+        DrawRounded:
+            // High Quality Rendering (Simulated)
             SetBkMode(hdc, TRANSPARENT);
+            
+            // Draw Background Shadow (Subtle) or Border
+            // Not doing complex shadow in pure GDI easily without alpha.
+            
+            // Draw Button
+            HBRUSH hBr = CreateSolidBrush(bg);
+            HBRUSH hOld = SelectObject(hdc, hBr);
+            HPEN hPen = CreatePen(PS_SOLID, 1, bg); // Border same as bg
+            HPEN hPenOld = SelectObject(hdc, hPen);
+            
+            // Use background color for corners
+            HBRUSH hBrBg = (id == ID_BTN_BROWSE) ? hBrushPanel : hBrushBg; // Browse is inside GroupBox which is usually panel colored? checking...
+            // Actually Browse is on hGrpFile which is groupbox, usually transparent or SysColor. 
+            // My GroupBox is standard, so it has gray bg.
+            
+            FillRect(hdc, &rect, hBrushBg); // Fill corners
+            
+            RoundRect(hdc, rect.left, rect.top, rect.right, rect.bottom, 8, 8);
+            
+            SelectObject(hdc, hOld);
+            SelectObject(hdc, hPenOld);
+            DeleteObject(hBr);
+            DeleteObject(hPen);
+            
             SetTextColor(hdc, txt);
-            SelectObject(hdc, hFontHeader);
+            SelectObject(hdc, hFontButton);
             DrawText(hdc, text, -1, &rect, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
             return TRUE;
         }
@@ -642,6 +909,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
                 ClearAllInputs(); 
                 currentMode = (enum AppMode)(id - ID_BTN_SIDE_CAESAR);
                 UpdateLayout();
+            }
+            // Handle Radio Clicks in Conversion Mode
+            if(currentMode == MODE_CONVERSION && (id == ID_RADIO_CAESAR || id == ID_RADIO_VIGENERE)) {
+                 UpdateLayout(); // Updates labels based on selection
             }
             
             if(id == ID_BTN_ACTION1) { 
@@ -675,27 +946,66 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam) {
         case WM_CTLCOLORSTATIC: {
             HDC hdc = (HDC)wParam;
             SetBkColor(hdc, APP_COLOR_BACKGROUND);
-            SetTextColor(hdc, RGB(20,20,30));
+            SetTextColor(hdc, RGB(50, 50, 50));
+            // Transparent background for labels
+            SetBkMode(hdc, TRANSPARENT);
             return (LRESULT)hBrushBg;
         }
         case WM_CTLCOLOREDIT: {
             HDC hdc = (HDC)wParam;
             SetTextColor(hdc, RGB(0,0,0));
-            SetBkColor(hdc, RGB(255,255,255));
-            return (LRESULT)hBrushPanel;
+            
+            // Check Focus (if this window has focus)
+            // Ideally we check if (HWND)lParam == GetFocus() but WM_CTLCOLOREDIT is sent before painting.
+            // A simple approximation: if it matches focused control.
+            
+            COLORREF bg = RGB(255, 255, 255);
+            if ((HWND)lParam == GetFocus()) {
+                 bg = APP_COLOR_INPUT_FOCUS;
+                 // SetBkColor(hdc, bg);
+                 // return (LRESULT)hBrushFocus;
+            }
+            
+            SetBkColor(hdc, bg);
+            // Return handle to brush.
+            // Note: system leaks brushes if we create them here, so use global.
+            return (HWND)lParam == GetFocus() ? (LRESULT)hBrushFocus : (LRESULT)hBrushPanel;
         }
+        
+        // Handle Focus Change to trigger repaint of Edit controls
+        // Since we don't subclass Edits yet, we might miss the immediate repaint on focus.
+        // But clicking them usually triggers enough.
 
         case WM_PAINT: {
             PAINTSTRUCT ps;
             HDC hdc = BeginPaint(hwnd, &ps);
-            RECT rSide = {0,0,240,800};
+            
+            // 1. Draw Sidebar Background
+            RECT rSide = {0, 0, 300, 900}; // Cover full height
             FillRect(hdc, &rSide, hBrushSidebar);
             
-            RECT rTitle = {10,30,230,100};
+            // 2. Draw App Title with Shadow
+            RECT rTitle = {30, 60, 280, 280}; // Adjusted for 300px width
+            RECT rShadow = {32, 62, 282, 282};
+            
             SetBkMode(hdc, TRANSPARENT);
+            SelectObject(hdc, hFontTitle);
+            
+            // Shadow
+            SetTextColor(hdc, RGB(20, 20, 25)); 
+            DrawText(hdc, "TEXT\nENCRYPTION &\nDECRYPTION\nSYSTEM", -1, &rShadow, DT_LEFT | DT_NOCLIP);
+            
+            // Foreground
             SetTextColor(hdc, APP_COLOR_SIDEBAR_TEXT);
-            SelectObject(hdc, hFontHeader);
-            DrawText(hdc, "TEXT ENCRYPTION\n& DECRYPTION\nSYSTEM", -1, &rTitle, DT_CENTER);
+            DrawText(hdc, "TEXT\nENCRYPTION &\nDECRYPTION\nSYSTEM", -1, &rTitle, DT_LEFT | DT_NOCLIP);
+            
+            // Separator Line
+            SelectObject(hdc, hPenSeparator);
+            MoveToEx(hdc, 30, 290, NULL);
+            LineTo(hdc, 270, 290);
+            
+            // 3. Draw Section Title (in sidebar?) -> Removed as per request (No version text)
+            
             EndPaint(hwnd, &ps);
             break;
         }
@@ -712,8 +1022,8 @@ int WINAPI WinMain(HINSTANCE hInst, HINSTANCE hPrev, LPSTR lpCmd, int nShow) {
                      LoadCursor(NULL, IDC_ARROW), CreateSolidBrush(APP_COLOR_BACKGROUND), NULL, "CryptAppV6", NULL};
     if(!RegisterClassEx(&wc)) return 0;
     
-    // Size: 1000 x 680
-    int w = 1000, h = 680;
+    // Size: 1200 x 800
+    int w = 1200, h = 800;
     int x = (GetSystemMetrics(SM_CXSCREEN)-w)/2;
     int y = (GetSystemMetrics(SM_CYSCREEN)-h)/2;
 
